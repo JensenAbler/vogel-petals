@@ -446,6 +446,8 @@
         const PSEUDO_SHOULDER_TOLERANCE = 0.0045;
         const PSEUDO_DIFFUSE_TOLERANCE = 0.0035;
         const QUARTER_PSEUDO_BIAS = 0.35;
+        const DISPLAY_COHERENCE_CUTOFF = 1.45;
+        const STRONG_EXACT_PETAL_COUNTS = new Set([1, 2, 3, 4, 5, 6, 9, 12, 14, 15, 20]);
 
         // Empirical exceptions that survive φ² offset shifts but are not yet
         // explained by the clean dyadic lattice rule. We keep them explicit so
@@ -462,6 +464,12 @@
                 count: 5,
                 coreTolerance: 0.0009,
                 shoulderTolerance: 0.0045,
+            },
+            {
+                residue: ((3.03006 % PHI_2) + PHI_2) % PHI_2,
+                count: 4,
+                coreTolerance: 0.0011,
+                shoulderTolerance: 0.0042,
             },
         ];
 
@@ -491,6 +499,20 @@
                 rhs += ` ${integerShift > 0 ? '+' : '-'} ${Math.abs(integerShift)}`;
             }
             return `${lhs} ${relation} ${rhs}`;
+        }
+
+        // The exact lattice overgenerates high petal counts relative to what is
+        // visually stable. Keep the counts we have actually validated strong,
+        // and gently demote the rest so pseudo bands can outrank brittle
+        // high-count aliases like 24 and 31.
+        function exactPetalBias(count) {
+            if (STRONG_EXACT_PETAL_COUNTS.has(count) || count <= 8) return 0;
+            if (count === 24) return 1.35;
+            if (count === 31) return 1.8;
+            if (count >= 24) return 1.6;
+            if (count >= 18) return 0.9;
+            if (count >= 10) return 0.45;
+            return 0.2;
         }
 
         function makeCandidate(type, label, formula, distance, tolerance, bias = 0) {
@@ -631,6 +653,7 @@
                     latticePetal.formula,
                     latticePetal.distanceP,
                     TIGHT_TOLERANCE,
+                    exactPetalBias(latticePetal.count),
                 ));
             }
 
@@ -707,7 +730,7 @@
                 detectPseudoCoherence(x),
             ]);
 
-            if (!bestMatch) {
+            if (!bestMatch || bestMatch.normalizedDistance > DISPLAY_COHERENCE_CUTOFF) {
                 return {
                     type: 'unclear',
                     label: 'Unclear',
@@ -760,7 +783,7 @@
         function coherenceStrength(P) {
             const piQuarter = PI / 4;
             const halfPhi2 = PHI_2 / 2;
-            const petalDist   = findNearestPetalLattice(P).distanceP;
+            const exactPetal  = findNearestPetalLattice(P);
             const phi2Dist    = Math.abs(P - Math.round(P / PHI_2) * PHI_2);
             const piDist      = Math.abs(P - Math.round(P / piQuarter) * piQuarter);
             const r7Dist      = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
@@ -777,7 +800,7 @@
             const empiricalDist = empirical ? empirical.distanceP : Infinity;
 
             const minNormalizedDist = Math.min(
-                petalDist      / TIGHT_TOLERANCE,
+                exactPetal.distanceP / TIGHT_TOLERANCE + exactPetalBias(exactPetal.count),
                 phi2Dist       / TIGHT_TOLERANCE,
                 piDist         / TOLERANCE,
                 r7Dist         / TIGHT_TOLERANCE,
