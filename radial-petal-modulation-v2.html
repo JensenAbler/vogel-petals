@@ -439,6 +439,7 @@
         
         const TOLERANCE = 0.012;
         const TIGHT_TOLERANCE = 0.005;
+        const ALL_TO_CENTER_TOLERANCE = 0.013;
         const GENERAL_PETAL_MAX = 40;
         const PSEUDO_PETAL_MAX = 20;
         const QUARTER_PSEUDO_MAX = 4;
@@ -450,7 +451,6 @@
         const PSEUDO_STRENGTH_WIDTH = 0.8;
         const PSEUDO_STRENGTH_POWER = 1.7;
         const DISPLAY_COHERENCE_CUTOFF = 1.45;
-        const STRONG_EXACT_PETAL_COUNTS = new Set([1, 2, 3, 4, 5, 6, 9, 12, 14, 15, 20]);
 
         // Empirical exceptions that survive φ² offset shifts but are not yet
         // explained by the clean dyadic lattice rule. We keep them explicit so
@@ -471,6 +471,12 @@
             {
                 residue: ((3.1574 % PHI_2) + PHI_2) % PHI_2,
                 count: 1,
+                coreTolerance: 0.001,
+                shoulderTolerance: 0.0042,
+            },
+            {
+                residue: ((3.0788 % PHI_2) + PHI_2) % PHI_2,
+                count: 4,
                 coreTolerance: 0.001,
                 shoulderTolerance: 0.0042,
             },
@@ -515,13 +521,10 @@
         // and gently demote the rest so pseudo bands can outrank brittle
         // high-count aliases like 24 and 31.
         function exactPetalBias(count) {
-            if (STRONG_EXACT_PETAL_COUNTS.has(count) || count <= 8) return 0;
-            if (count === 24) return 1.35;
-            if (count === 31) return 1.8;
-            if (count >= 24) return 1.6;
-            if (count >= 18) return 0.9;
-            if (count >= 10) return 0.45;
-            return 0.2;
+            if (count <= 10) return 0;
+            if (count === 24) return 1.2;
+            if (count >= 31) return 1.8;
+            return 0.07 * (count - 10);
         }
 
         function makeCandidate(type, label, formula, distance, tolerance, bias = 0) {
@@ -597,6 +600,25 @@
         function detectPseudoCoherence(P) {
             const candidates = [];
 
+            // Former "half-disc" centers are now treated as pseudo 1-petal
+            // coherences: they behave like a once-removed echo, not like a
+            // primary exact family.
+            const halfPhi2 = PHI_2 / 2;
+            const nHalfPhi2PlusHalf = (P - 0.5) / halfPhi2;
+            const nearestNHalfPhi2 = Math.round(nHalfPhi2PlusHalf);
+            const nHalfPhi2Distance = Math.abs(P - (nearestNHalfPhi2 * halfPhi2 + 0.5));
+            if (nHalfPhi2Distance < TIGHT_TOLERANCE && Math.abs(nearestNHalfPhi2) >= 2) {
+                const m = nearestNHalfPhi2;
+                const formula = m % 2 === 0 ? `${m / 2}φ² + ½` : `${m}/2·φ² + ½`;
+                candidates.push(makeCandidate(
+                    'pseudo',
+                    'Pseudo 1 petal',
+                    formula,
+                    nHalfPhi2Distance,
+                    TIGHT_TOLERANCE,
+                ));
+            }
+
             const empirical = findNearestEmpiricalPseudo(P);
             if (empirical && empirical.distanceP < empirical.shoulderTolerance) {
                 const isCore = empirical.distanceP < empirical.coreTolerance;
@@ -643,13 +665,13 @@
             const step = x / PHI_2;
             const nearestStepInteger = Math.round(step);
             const phi2Distance = Math.abs(step - nearestStepInteger) * PHI_2;
-            if (phi2Distance < TIGHT_TOLERANCE && Math.abs(nearestStepInteger) >= 1) {
+            if (phi2Distance < ALL_TO_CENTER_TOLERANCE && Math.abs(nearestStepInteger) >= 1) {
                 candidates.push(makeCandidate(
                     'all-to-center',
                     'All-to-center',
                     `${nearestStepInteger}φ²`,
                     phi2Distance,
-                    TIGHT_TOLERANCE,
+                    ALL_TO_CENTER_TOLERANCE,
                 ));
             }
 
@@ -663,24 +685,6 @@
                     latticePetal.distanceP,
                     TIGHT_TOLERANCE,
                     exactPetalBias(latticePetal.count),
-                ));
-            }
-
-            // Rule 7: numPetals = (n/2)φ² + 0.5 → half-disc, any |n| ≥ 2.
-            // Multiples of 0.5φ² shifted by +0.5.
-            const halfPhi2 = PHI_2 / 2;  // 0.5φ² ≈ 1.309
-            const nHalfPhi2PlusHalf = (x - 0.5) / halfPhi2;
-            const nearestNHalfPhi2 = Math.round(nHalfPhi2PlusHalf);
-            const nHalfPhi2Distance = Math.abs(x - (nearestNHalfPhi2 * halfPhi2 + 0.5));
-            if (nHalfPhi2Distance < TIGHT_TOLERANCE && Math.abs(nearestNHalfPhi2) >= 2) {
-                const m = nearestNHalfPhi2;
-                const label = m % 2 === 0 ? `${m / 2}φ² + ½` : `${m}/2·φ² + ½`;
-                candidates.push(makeCandidate(
-                    'half-disc',
-                    'Half-disc',
-                    label,
-                    nHalfPhi2Distance,
-                    TIGHT_TOLERANCE,
                 ));
             }
 
@@ -810,7 +814,7 @@
 
             const exactNormalizedDist = Math.min(
                 exactPetal.distanceP / TIGHT_TOLERANCE + exactPetalBias(exactPetal.count),
-                phi2Dist       / TIGHT_TOLERANCE,
+                phi2Dist       / ALL_TO_CENTER_TOLERANCE,
                 piDist         / TOLERANCE,
                 r7Dist         / TIGHT_TOLERANCE,
                 r8Dist         / TIGHT_TOLERANCE,
