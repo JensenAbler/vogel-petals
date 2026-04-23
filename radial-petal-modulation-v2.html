@@ -446,6 +446,8 @@
         const PSEUDO_SHOULDER_TOLERANCE = 0.0045;
         const PSEUDO_DIFFUSE_TOLERANCE = 0.0035;
         const QUARTER_PSEUDO_BIAS = 0.35;
+        const PSEUDO_STRENGTH_CAP = 0.35;
+        const PSEUDO_REFERENCE_NORM = 1.24594973218041;
         const DISPLAY_COHERENCE_CUTOFF = 1.45;
         const STRONG_EXACT_PETAL_COUNTS = new Set([1, 2, 3, 4, 5, 6, 9, 12, 14, 15, 20]);
 
@@ -805,18 +807,26 @@
             const empirical = findNearestEmpiricalPseudo(P);
             const empiricalDist = empirical ? empirical.distanceP : Infinity;
 
-            const minNormalizedDist = Math.min(
+            const exactNormalizedDist = Math.min(
                 exactPetal.distanceP / TIGHT_TOLERANCE + exactPetalBias(exactPetal.count),
                 phi2Dist       / TIGHT_TOLERANCE,
                 piDist         / TOLERANCE,
                 r7Dist         / TIGHT_TOLERANCE,
                 r8Dist         / TIGHT_TOLERANCE,
+            );
+
+            const pseudoNormalizedDist = Math.min(
                 dyadicDist     / PSEUDO_SHOULDER_TOLERANCE,
                 quarterDist    / PSEUDO_DIFFUSE_TOLERANCE + QUARTER_PSEUDO_BIAS,
                 empiricalDist  / (empirical ? empirical.shoulderTolerance : 1),
             );
 
-            return Math.exp(-minNormalizedDist);
+            const exactStrength = Math.exp(-exactNormalizedDist);
+            const pseudoStrength = PSEUDO_STRENGTH_CAP * Math.exp(
+                -Math.max(0, pseudoNormalizedDist - PSEUDO_REFERENCE_NORM)
+            );
+
+            return Math.max(exactStrength, pseudoStrength);
         }
         
         function getTourSpeed(x) {
