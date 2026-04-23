@@ -505,8 +505,11 @@
         //
         // The returned `residual` is the step-space distance to the nearest
         // lattice point; multiply by basis.alphaSq to get distance in P.
-        // Not yet called — wired in by a later commit.
-        function decompose(P, basis, { aRange = 30 } = {}) {
+        //
+        // aRange bounds |a|; the default 100 covers |a| = Fib(11) = 89 so
+        // φⁿ coherences are recognized up through n = 13 (P ≈ 521), well
+        // past the visually distinguishable range on 1000 particles.
+        function decompose(P, basis, { aRange = 100 } = {}) {
             const step = P / basis.alphaSq;
             const b0 = Math.round(step);
             let best = { a: 0, b: b0, residual: Math.abs(step - b0) };
@@ -539,44 +542,66 @@
 
         // detectPseudoCoherence: a near-miss against an integer-base primary.
         // Unified with the primary detector by reading the same decompose()
-        // output. Integer P corresponds to (a=-n, b=2n) on the ℤ[φ] lattice;
-        // a pseudo is the same pattern with a residual in PSEUDO_BAND.
+        // output. Integer P = m corresponds to (a, b) = (-m, 2m) for positive m
+        // and (m, -2m) for negative m on the ℤ[φ] lattice; a pseudo is the
+        // same pattern with a residual in PSEUDO_BAND. Works for any |m| ≥ 3.
         function detectPseudoCoherence(P) {
             const { a, b, residual } = decompose(P, GOLDEN_BASIS);
             const residualP = residual * GOLDEN_BASIS.alphaSq;
 
-            // Integer-base pattern only — matches the old floor(P)-based check,
-            // but now recognized by lattice shape rather than sign of offset.
-            if (!(a <= -3 && a >= -8 && b === -2 * a)) return null;
+            // b + 2a == 0 matches the integer-base pattern symmetrically for
+            // positive and negative integer bases — the sign of a flips but
+            // b = -2a holds either way.
+            const n = Math.abs(a);
+            if (n < 3 || b !== -2 * a) return null;
             if (residualP < TIGHT_TOLERANCE || residualP >= PSEUDO_BAND_MAX) return null;
 
-            const n = -a;
-            // Recover the implied denominator k from residualP ≈ φ·n/k.
-            // Old ladders keyed their sub-labels to specific k values; the
-            // information is preserved by reporting k itself.
+            // Recover the implied denominator k from residualP ≈ φ·n/k. Old
+            // ladders keyed their sub-labels to specific k; reporting k keeps
+            // that information even though the ladders are gone.
             const kImplied = Math.round(PHI * n / residualP);
+            const baseInt = Math.round(P);
+            const offsetSign = P >= baseInt ? '+' : '-';
             return {
                 type: 'pseudo',
                 label: `Pseudo ${n} petals`,
-                formula: `${n} + φ·${n}/${kImplied}`
+                formula: `${baseInt} ${offsetSign} φ·${n}/${kImplied}`
             };
         }
 
 
+        // fibPowerFromPair(a, b): if (a, b) = (Fib(n), Fib(n-1)) for some
+        // n ≥ 1, return n + 2 (the φ power such that P = φⁿ⁺² decomposes to
+        // this pair via step_size_decomposition). Otherwise null. Walks the
+        // Fibonacci recurrence rather than a fixed lookup so any power is
+        // recognized — the tour no longer caps at {φ³, φ⁴, φ⁵}.
+        function fibPowerFromPair(a, b) {
+            if (a < 1 || b < 0 || b > a) return null;
+            let f1 = 1, f0 = 0;
+            for (let n = 1; n <= 30; n++) {
+                if (f1 === a && f0 === b) return n + 2;
+                [f1, f0] = [f1 + f0, f1];
+            }
+            return null;
+        }
+
         // matchGoldenRule: pattern-match the (a, b) from decompose(x, GOLDEN_BASIS)
         // against the golden-family rules. Returns { distance, match } or null.
         //
-        // Each legacy rule is a specific (a, b) pattern on the ℤ[φ] lattice:
+        // Each rule is a specific (a, b) pattern on the ℤ[φ] lattice, using
+        // magnitudes so that positive and negative P are handled symmetrically
+        // (sin⁸ is even; see comment inside):
         //
-        //   Rule 2 (nφ → n petals):      (a=n, b=-n),   n ∈ [2, 6]
+        //   Rule 2 (nφ → |n| petals):     b = -a, |n| ≥ 2
         //     because P = nφ ⇒ step = n/φ = nφ - n.
-        //   Rule 3 (n/φ → 2n petals):    (a=2n, b=-3n), n ∈ [5, 15]
+        //   Rule 3 (n/φ → |2n| petals):   2b = -3a, |n| ≥ 2
         //     because P = n/φ ⇒ step = n/φ³ = 2nφ - 3n.
-        //   Rule 4 (nφ² → all-to-center):(a=0, b=n),    n ∈ [1, 4]
+        //   Rule 4 (nφ² → all-to-center): a = 0, |n| ≥ 1
         //     because P = nφ² ⇒ step = n (integer, vanishes under sin⁸).
-        //   Rule 5 (φⁿ → half-disc):     (a=Fib(n-2), b=Fib(n-3)), n ∈ {3,4,5}
+        //   Rule 5 (φⁿ → half-disc):      (|a|, |b|) = (Fib(n), Fib(n-1))
         //     which is `step_size_decomposition` from VogelSpiral.lean.
-        //   Rule 5b (conch near φⁿ):     same (a, b) as Rule 5, mid residual.
+        //   Rule 5b (conch near φⁿ):      same pattern as Rule 5, mid residual,
+        //     only for φ³ and φ⁴ where the point-cloud vs. spiral sides differ.
         //
         // The residual from decompose is in step-space; residualP = residual · α²
         // is the x-space distance, equivalent to the old |x - center| checks.
@@ -584,54 +609,70 @@
             const { a, b, residual } = decomp;
             const residualP = residual * basis.alphaSq;
 
-            // Rule 4: (0, n) for n ∈ [1, 4]
-            if (a === 0 && b >= 1 && b <= 4 && residualP < TIGHT_TOLERANCE) {
+            // Sign-agnostic view: the modulation sin⁸ is even, so (a, b) and
+            // (-a, -b) describe the same visual (P and -P produce the same
+            // petal pattern). Label using magnitudes; sign of P is reflected
+            // in the formula via the sign of the leading coefficient.
+            const absA = Math.abs(a);
+            const absB = Math.abs(b);
+            const sign = a < 0 || (a === 0 && b < 0) ? -1 : 1;
+            const sgn = (k) => sign < 0 ? `-${k}` : `${k}`;
+
+            // Rule 4: (0, n) → nφ² "all-to-center". Any |n| ≥ 1.
+            if (a === 0 && absB >= 1 && residualP < TIGHT_TOLERANCE) {
                 return {
                     distance: residualP,
-                    match: { type: 'all-to-center', label: 'All-to-center', formula: `${b}φ²` }
+                    match: { type: 'all-to-center', label: 'All-to-center', formula: `${sgn(absB)}φ²` }
                 };
             }
 
-            // Rule 5 / 5b: (Fib(n-2), Fib(n-3)) for P = φⁿ, n ∈ {3, 4, 5}.
-            const phiPowerByAB = { '1,0': 3, '1,1': 4, '2,1': 5 };
-            const phiLabels = { 3: 'φ³', 4: 'φ⁴', 5: 'φ⁵' };
-            const phiPower = phiPowerByAB[`${a},${b}`];
+            // Rule 5 / 5b: (Fib(n), Fib(n-1)) for P = ±φⁿ⁺², any n ≥ 1.
+            // Derives the φ power on the fly instead of looking up a fixed map.
+            const phiPower = fibPowerFromPair(absA, absB);
+            const phiLabel = (p) => {
+                const supers = { 0:'⁰',1:'¹',2:'²',3:'³',4:'⁴',5:'⁵',6:'⁶',7:'⁷',8:'⁸',9:'⁹' };
+                const s = String(p).split('').map(c => supers[c] || c).join('');
+                return `${sign < 0 ? '-' : ''}φ${s}`;
+            };
 
-            if (phiPower !== undefined && residualP < TIGHT_TOLERANCE) {
+            if (phiPower !== null && residualP < TIGHT_TOLERANCE) {
                 return {
                     distance: residualP,
-                    match: { type: 'half-disc', label: 'Half-disc', formula: phiLabels[phiPower] }
+                    match: { type: 'half-disc', label: 'Half-disc', formula: phiLabel(phiPower) }
                 };
             }
 
+            // Rule 5b: conch-band residual. Kept specific to φ³ and φ⁴ because
+            // the point-cloud vs. spiral sides are only visually distinct at
+            // those low powers; higher φⁿ just look like a sharper half-disc.
             if ((phiPower === 3 || phiPower === 4)
                     && residualP >= TIGHT_TOLERANCE && residualP < TOLERANCE) {
-                const pVal = phiPower === 3 ? PHI_3 : PHI_4;
+                const pVal = (phiPower === 3 ? PHI_3 : PHI_4) * sign;
                 const side = P < pVal ? 'point-cloud' : 'spiral';
                 return {
                     distance: residualP,
                     match: {
                         type: 'conch',
                         label: `Conch (${side})`,
-                        formula: `${phiLabels[phiPower]} ${P < pVal ? '-' : '+'} ${residualP.toFixed(4)}`
+                        formula: `${phiLabel(phiPower)} ${P < pVal ? '-' : '+'} ${residualP.toFixed(4)}`
                     }
                 };
             }
 
-            // Rule 2: (n, -n) for n ∈ [2, 6]
-            if (a >= 2 && a <= 6 && b === -a && residualP < TOLERANCE) {
+            // Rule 2: (n, -n) → nφ, |n| petals. Any |n| ≥ 2.
+            if (b === -a && absA >= 2 && residualP < TOLERANCE) {
                 return {
                     distance: residualP,
-                    match: { type: 'petals', label: `${a} petals`, formula: `${a}φ` }
+                    match: { type: 'petals', label: `${absA} petals`, formula: `${sgn(absA)}φ` }
                 };
             }
 
-            // Rule 3: (2n, -3n) for n ∈ [5, 15]
-            if (a % 2 === 0 && a / 2 >= 5 && a / 2 <= 15 && b === -3 * a / 2
+            // Rule 3: (2n, -3n) → n/φ, |2n| petals. Any |n| ≥ 2 (|a| ≥ 4).
+            if (a % 2 === 0 && b === -3 * a / 2 && absA / 2 >= 2
                     && residualP < TOLERANCE) {
                 return {
                     distance: residualP,
-                    match: { type: 'petals', label: `${a} petals`, formula: `${a / 2}/φ` }
+                    match: { type: 'petals', label: `${absA} petals`, formula: `${sgn(absA / 2)}/φ` }
                 };
             }
 
@@ -642,17 +683,17 @@
             let bestMatch = null;
             let bestDistance = Infinity;
 
-            // Rule 1: numPetals = n (integer) → n petals. Not unified into
+            // Rule 1: numPetals = n (integer) → |n| petals. Not unified into
             // decompose() because its mechanism is the direct modulation
             // period matching integer-fold symmetry, not the ℤ[φ] lattice.
             const nearestInt = Math.round(x);
             const intDistance = Math.abs(x - nearestInt);
-            if (intDistance < TOLERANCE && nearestInt >= 3 && nearestInt <= 9) {
+            if (intDistance < TOLERANCE && Math.abs(nearestInt) >= 3) {
                 if (intDistance < bestDistance) {
                     bestDistance = intDistance;
                     bestMatch = {
                         type: 'petals',
-                        label: `${nearestInt} petals`,
+                        label: `${Math.abs(nearestInt)} petals`,
                         formula: `${nearestInt}`
                     };
                 }
@@ -665,22 +706,17 @@
                 bestMatch = goldenResult.match;
             }
 
-            // Rule 7: numPetals = (n/2)φ² + 0.5 → half-disc (n = 1, 2, 3, 4, 5, 6...)
-            // This means multiples of 0.5φ²: 0.5φ², 1φ², 1.5φ², 2φ², 2.5φ², 3φ²... all shifted by +0.5
+            // Rule 7: numPetals = (n/2)φ² + 0.5 → half-disc, any |n| ≥ 2.
+            // Multiples of 0.5φ² shifted by +0.5.
             const halfPhi2 = PHI_2 / 2;  // 0.5φ² ≈ 1.309
             const nHalfPhi2PlusHalf = (x - 0.5) / halfPhi2;
             const nearestNHalfPhi2 = Math.round(nHalfPhi2PlusHalf);
             const nHalfPhi2Distance = Math.abs(x - (nearestNHalfPhi2 * halfPhi2 + 0.5));
-            if (nHalfPhi2Distance < TIGHT_TOLERANCE && nearestNHalfPhi2 >= 2 && nearestNHalfPhi2 <= 7) {
+            if (nHalfPhi2Distance < TIGHT_TOLERANCE && Math.abs(nearestNHalfPhi2) >= 2) {
                 if (nHalfPhi2Distance < bestDistance) {
                     bestDistance = nHalfPhi2Distance;
-                    // Format the label nicely
-                    let label;
-                    if (nearestNHalfPhi2 % 2 === 0) {
-                        label = `${nearestNHalfPhi2 / 2}φ² + ½`;
-                    } else {
-                        label = `${nearestNHalfPhi2}/2·φ² + ½`;
-                    }
+                    const m = nearestNHalfPhi2;
+                    const label = m % 2 === 0 ? `${m / 2}φ² + ½` : `${m}/2·φ² + ½`;
                     bestMatch = {
                         type: 'half-disc',
                         label: 'Half-disc',
@@ -688,32 +724,28 @@
                     };
                 }
             }
-            
-            // Rule 8: (n + 0.5)φ² → spirals (half-integer multiples of φ²)
+
+            // Rule 8: (n + 0.5)φ² → spirals, half-integer multiples of φ², any |n| ≥ 1.
             const nPlusHalfPhi2 = x / PHI_2;
-            const fractionalPart = nPlusHalfPhi2 - Math.floor(nPlusHalfPhi2);
-            // Check if close to .5 (half-integer)
-            if (Math.abs(fractionalPart - 0.5) < 0.005) {
-                const nearestHalfInt = Math.floor(nPlusHalfPhi2) + 0.5;
-                const halfIntPhi2Distance = Math.abs(x - nearestHalfInt * PHI_2);
-                if (halfIntPhi2Distance < TIGHT_TOLERANCE && nearestHalfInt >= 1.5 && nearestHalfInt <= 3.5) {
-                    if (halfIntPhi2Distance < bestDistance) {
-                        bestDistance = halfIntPhi2Distance;
-                        const nVal = nearestHalfInt - 0.5;
-                        bestMatch = {
-                            type: 'spiral',
-                            label: 'Spirals',
-                            formula: `${nVal}½φ²`
-                        };
-                    }
+            const nearestHalfInt = Math.round(nPlusHalfPhi2 - 0.5) + 0.5;
+            const halfIntPhi2Distance = Math.abs(x - nearestHalfInt * PHI_2);
+            if (halfIntPhi2Distance < TIGHT_TOLERANCE && Math.abs(nearestHalfInt) >= 1.5) {
+                if (halfIntPhi2Distance < bestDistance) {
+                    bestDistance = halfIntPhi2Distance;
+                    const nVal = nearestHalfInt < 0 ? nearestHalfInt + 0.5 : nearestHalfInt - 0.5;
+                    bestMatch = {
+                        type: 'spiral',
+                        label: 'Spirals',
+                        formula: `${nVal}½φ²`
+                    };
                 }
             }
-            
-            // Rule 6: numPetals = nπ/4 → spirals/dual-spokes
+
+            // Rule 6: numPetals = nπ/4 → spirals/dual-spokes, any |n| ≥ 4.
             const piQuarter = PI / 4;
             const nearestPiN = Math.round(x / piQuarter);
             const piDistance = Math.abs(x - nearestPiN * piQuarter);
-            if (piDistance < TOLERANCE && nearestPiN >= 4 && nearestPiN <= 12) {
+            if (piDistance < TOLERANCE && Math.abs(nearestPiN) >= 4) {
                 if (piDistance < bestDistance) {
                     bestDistance = piDistance;
                     
