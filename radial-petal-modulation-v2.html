@@ -157,36 +157,6 @@
             border: 1px dashed rgba(251, 191, 36, 0.4);
         }
         
-        .pseudo-toggle {
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            font-size: 0.55rem;
-            color: var(--text-muted);
-            cursor: pointer;
-            pointer-events: auto;
-            padding: 0.3rem 0.5rem;
-            background: rgba(251, 191, 36, 0.1);
-            border-radius: 0.3rem;
-            transition: all 0.2s ease;
-        }
-        
-        .pseudo-toggle:hover {
-            background: rgba(251, 191, 36, 0.2);
-        }
-        
-        .pseudo-toggle input {
-            width: 14px;
-            height: 14px;
-            accent-color: #fbbf24;
-            cursor: pointer;
-        }
-        
-        .toggle-label {
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        
         .structure-indicator.conch {
             background: rgba(251, 146, 60, 0.2);
             color: var(--accent-orange);
@@ -441,10 +411,6 @@
         <div class="playback-controls">
             <button class="tour-btn" id="tourBtn">🎯 Coherence Tour</button>
             <button class="tour-btn" id="colorBtn">🎨 Birth Order Colors</button>
-            <label class="pseudo-toggle">
-                <input type="checkbox" id="pseudoToggle">
-                <span class="toggle-label">Pseudo Coherence Mode</span>
-            </label>
         </div>
     </div>
     
@@ -479,6 +445,7 @@
         const PSEUDO_CORE_TOLERANCE = 0.0009;
         const PSEUDO_SHOULDER_TOLERANCE = 0.0045;
         const PSEUDO_DIFFUSE_TOLERANCE = 0.0035;
+        const QUARTER_PSEUDO_BIAS = 0.35;
 
         // Empirical exceptions that survive φ² offset shifts but are not yet
         // explained by the clean dyadic lattice rule. We keep them explicit so
@@ -497,10 +464,6 @@
                 shoulderTolerance: 0.0045,
             },
         ];
-
-        function distToNearestInteger(x) {
-            return Math.abs(x - Math.round(x));
-        }
 
         function mod(x, period) {
             return ((x % period) + period) % period;
@@ -528,6 +491,25 @@
                 rhs += ` ${integerShift > 0 ? '+' : '-'} ${Math.abs(integerShift)}`;
             }
             return `${lhs} ${relation} ${rhs}`;
+        }
+
+        function makeCandidate(type, label, formula, distance, tolerance, bias = 0) {
+            return {
+                type,
+                label,
+                formula,
+                distance,
+                tolerance,
+                normalizedDistance: distance / tolerance + bias,
+            };
+        }
+
+        function chooseBestCandidate(candidates) {
+            const valid = candidates.filter(Boolean);
+            if (valid.length === 0) return null;
+            return valid.reduce((best, candidate) =>
+                candidate.normalizedDistance < best.normalizedDistance ? candidate : best
+            );
         }
 
         // General petal lattice:
@@ -582,68 +564,74 @@
         }
 
         function detectPseudoCoherence(P) {
+            const candidates = [];
+
             const empirical = findNearestEmpiricalPseudo(P);
             if (empirical && empirical.distanceP < empirical.shoulderTolerance) {
                 const isCore = empirical.distanceP < empirical.coreTolerance;
-                return {
-                    type: 'pseudo',
-                    label: formatPetalLabel(empirical.count, isCore ? 'Pseudo' : 'Twisted pseudo'),
-                    formula: empirical.formula,
-                };
+                candidates.push(makeCandidate(
+                    'pseudo',
+                    formatPetalLabel(empirical.count, isCore ? 'Pseudo' : 'Twisted pseudo'),
+                    empirical.formula,
+                    empirical.distanceP,
+                    isCore ? empirical.coreTolerance : empirical.shoulderTolerance,
+                ));
             }
 
             const dyadic = findNearestPetalLattice(P, { scale: 2, maxPetals: PSEUDO_PETAL_MAX });
             if (dyadic && dyadic.distanceP < PSEUDO_SHOULDER_TOLERANCE) {
                 const isCore = dyadic.distanceP < PSEUDO_CORE_TOLERANCE;
-                return {
-                    type: 'pseudo',
-                    label: formatPetalLabel(dyadic.count, isCore ? 'Pseudo' : 'Twisted pseudo'),
-                    formula: dyadic.formula,
-                };
+                candidates.push(makeCandidate(
+                    'pseudo',
+                    formatPetalLabel(dyadic.count, isCore ? 'Pseudo' : 'Twisted pseudo'),
+                    dyadic.formula,
+                    dyadic.distanceP,
+                    isCore ? PSEUDO_CORE_TOLERANCE : PSEUDO_SHOULDER_TOLERANCE,
+                ));
             }
 
             const quarter = findNearestPetalLattice(P, { scale: 4, maxPetals: QUARTER_PSEUDO_MAX });
             if (quarter && quarter.distanceP < PSEUDO_DIFFUSE_TOLERANCE) {
-                return {
-                    type: 'pseudo',
-                    label: formatPetalLabel(quarter.count, 'Diffuse pseudo'),
-                    formula: quarter.formula,
-                };
+                candidates.push(makeCandidate(
+                    'pseudo',
+                    formatPetalLabel(quarter.count, 'Diffuse pseudo'),
+                    quarter.formula,
+                    quarter.distanceP,
+                    PSEUDO_DIFFUSE_TOLERANCE,
+                    QUARTER_PSEUDO_BIAS,
+                ));
             }
 
-            return null;
+            return chooseBestCandidate(candidates);
         }
 
-        function detectCoherence(x) {
-            let bestMatch = null;
-            let bestDistance = Infinity;
+        function detectExactCoherence(x) {
+            const candidates = [];
 
             // Exact all-to-center coherences are the integer points in step-space.
             const step = x / PHI_2;
             const nearestStepInteger = Math.round(step);
             const phi2Distance = Math.abs(step - nearestStepInteger) * PHI_2;
             if (phi2Distance < TIGHT_TOLERANCE && Math.abs(nearestStepInteger) >= 1) {
-                if (phi2Distance < bestDistance) {
-                    bestDistance = phi2Distance;
-                    bestMatch = {
-                        type: 'all-to-center',
-                        label: 'All-to-center',
-                        formula: `${nearestStepInteger}φ²`
-                    };
-                }
+                candidates.push(makeCandidate(
+                    'all-to-center',
+                    'All-to-center',
+                    `${nearestStepInteger}φ²`,
+                    phi2Distance,
+                    TIGHT_TOLERANCE,
+                ));
             }
 
             // General exact petal lattice.
             const latticePetal = findNearestPetalLattice(x);
             if (latticePetal && latticePetal.distanceP < TIGHT_TOLERANCE) {
-                if (latticePetal.distanceP < bestDistance) {
-                    bestDistance = latticePetal.distanceP;
-                    bestMatch = {
-                        type: 'petals',
-                        label: formatPetalLabel(latticePetal.count),
-                        formula: latticePetal.formula
-                    };
-                }
+                candidates.push(makeCandidate(
+                    'petals',
+                    formatPetalLabel(latticePetal.count),
+                    latticePetal.formula,
+                    latticePetal.distanceP,
+                    TIGHT_TOLERANCE,
+                ));
             }
 
             // Rule 7: numPetals = (n/2)φ² + 0.5 → half-disc, any |n| ≥ 2.
@@ -653,16 +641,15 @@
             const nearestNHalfPhi2 = Math.round(nHalfPhi2PlusHalf);
             const nHalfPhi2Distance = Math.abs(x - (nearestNHalfPhi2 * halfPhi2 + 0.5));
             if (nHalfPhi2Distance < TIGHT_TOLERANCE && Math.abs(nearestNHalfPhi2) >= 2) {
-                if (nHalfPhi2Distance < bestDistance) {
-                    bestDistance = nHalfPhi2Distance;
-                    const m = nearestNHalfPhi2;
-                    const label = m % 2 === 0 ? `${m / 2}φ² + ½` : `${m}/2·φ² + ½`;
-                    bestMatch = {
-                        type: 'half-disc',
-                        label: 'Half-disc',
-                        formula: label
-                    };
-                }
+                const m = nearestNHalfPhi2;
+                const label = m % 2 === 0 ? `${m / 2}φ² + ½` : `${m}/2·φ² + ½`;
+                candidates.push(makeCandidate(
+                    'half-disc',
+                    'Half-disc',
+                    label,
+                    nHalfPhi2Distance,
+                    TIGHT_TOLERANCE,
+                ));
             }
 
             // Rule 8: (n + 0.5)φ² → spirals, half-integer multiples of φ², any |n| ≥ 1.
@@ -670,15 +657,14 @@
             const nearestHalfInt = Math.round(nPlusHalfPhi2 - 0.5) + 0.5;
             const halfIntPhi2Distance = Math.abs(x - nearestHalfInt * PHI_2);
             if (halfIntPhi2Distance < TIGHT_TOLERANCE && Math.abs(nearestHalfInt) >= 1.5) {
-                if (halfIntPhi2Distance < bestDistance) {
-                    bestDistance = halfIntPhi2Distance;
-                    const nVal = nearestHalfInt < 0 ? nearestHalfInt + 0.5 : nearestHalfInt - 0.5;
-                    bestMatch = {
-                        type: 'spiral',
-                        label: 'Spirals',
-                        formula: `${nVal}½φ²`
-                    };
-                }
+                const nVal = nearestHalfInt < 0 ? nearestHalfInt + 0.5 : nearestHalfInt - 0.5;
+                candidates.push(makeCandidate(
+                    'spiral',
+                    'Spirals',
+                    `${nVal}½φ²`,
+                    halfIntPhi2Distance,
+                    TIGHT_TOLERANCE,
+                ));
             }
 
             // Rule 6: numPetals = nπ/4 → spirals/dual-spokes, any |n| ≥ 4.
@@ -686,36 +672,41 @@
             const nearestPiN = Math.round(x / piQuarter);
             const piDistance = Math.abs(x - nearestPiN * piQuarter);
             if (piDistance < TOLERANCE && Math.abs(nearestPiN) >= 4) {
-                if (piDistance < bestDistance) {
-                    bestDistance = piDistance;
-                    
-                    // Determine spiral type based on which multiple
-                    let piLabel;
-                    let spiralType;
-                    
-                    if (nearestPiN % 4 === 0) {
-                        // Integer multiple of π
-                        piLabel = `${nearestPiN / 4}π`;
-                        spiralType = 'Dual-spokes';
-                    } else if (nearestPiN % 2 === 0) {
-                        // Half-integer multiple of π (nπ/2)
-                        piLabel = `${nearestPiN / 2}π/2`;
-                        spiralType = 'Dual-spokes';
-                    } else {
-                        // Quarter multiple of π (nπ/4)
-                        piLabel = `${nearestPiN}π/4`;
-                        spiralType = 'Spiral + dark core';
-                    }
-                    
-                    bestMatch = {
-                        type: 'pi-coherent',
-                        label: spiralType,
-                        formula: piLabel
-                    };
+                let piLabel;
+                let spiralType;
+                
+                if (nearestPiN % 4 === 0) {
+                    // Integer multiple of π
+                    piLabel = `${nearestPiN / 4}π`;
+                    spiralType = 'Dual-spokes';
+                } else if (nearestPiN % 2 === 0) {
+                    // Half-integer multiple of π (nπ/2)
+                    piLabel = `${nearestPiN / 2}π/2`;
+                    spiralType = 'Dual-spokes';
+                } else {
+                    // Quarter multiple of π (nπ/4)
+                    piLabel = `${nearestPiN}π/4`;
+                    spiralType = 'Spiral + dark core';
                 }
+                
+                candidates.push(makeCandidate(
+                    'pi-coherent',
+                    spiralType,
+                    piLabel,
+                    piDistance,
+                    TOLERANCE,
+                ));
             }
-            
-            // Default: unclear
+
+            return chooseBestCandidate(candidates);
+        }
+
+        function detectCoherence(x) {
+            const bestMatch = chooseBestCandidate([
+                detectExactCoherence(x),
+                detectPseudoCoherence(x),
+            ]);
+
             if (!bestMatch) {
                 return {
                     type: 'unclear',
@@ -723,8 +714,12 @@
                     formula: ''
                 };
             }
-            
-            return bestMatch;
+
+            return {
+                type: bestMatch.type,
+                label: bestMatch.label,
+                formula: bestMatch.formula
+            };
         }
         
         // Canvas and rendering setup
@@ -738,7 +733,6 @@
         const playBtn = document.getElementById('playBtn');
         const tourBtn = document.getElementById('tourBtn');
         const colorBtn = document.getElementById('colorBtn');
-        const pseudoToggle = document.getElementById('pseudoToggle');
         
         // State
         let numPetals = 3.0;
@@ -747,7 +741,6 @@
         let lastX = 0;
         let isPlaying = true; // Start playing by default
         let isTourMode = true; // Start in tour mode by default
-        let pseudoMode = false; // When true, show ONLY pseudo coherences
         let colorByBirthOrder = false; // When true, use blue-to-red gradient instead of petalShape
         let animationId = null;
         let lastFrameTime = 0;
@@ -761,50 +754,40 @@
         let lastTourSpeed = TOUR_CRUISE_SPEED;
         
         // coherenceStrength(P): map distance-to-family into [0, 1] for the
-        // automatic tour. Exact mode now uses the general petal lattice plus
-        // the spiral / all-to-center families. Pseudo mode uses the dyadic
-        // and quarter echoes of that lattice, then folds in the two currently
-        // empirical residue classes we still cannot derive cleanly.
+        // automatic tour. Exact and pseudo families now live on the same
+        // continuous graph, so the slowdown depends on whichever structure is
+        // most coherent at the current P.
         function coherenceStrength(P) {
             const piQuarter = PI / 4;
             const halfPhi2 = PHI_2 / 2;
+            const petalDist   = findNearestPetalLattice(P).distanceP;
+            const phi2Dist    = Math.abs(P - Math.round(P / PHI_2) * PHI_2);
+            const piDist      = Math.abs(P - Math.round(P / piQuarter) * piQuarter);
+            const r7Dist      = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
+            const r8Dist      = Math.abs(P - (Math.round(P / PHI_2 - 0.5) + 0.5) * PHI_2);
+            const dyadicDist  = findNearestPetalLattice(P, {
+                scale: 2,
+                maxPetals: PSEUDO_PETAL_MAX,
+            }).distanceP;
+            const quarterDist = findNearestPetalLattice(P, {
+                scale: 4,
+                maxPetals: QUARTER_PSEUDO_MAX,
+            }).distanceP;
+            const empirical = findNearestEmpiricalPseudo(P);
+            const empiricalDist = empirical ? empirical.distanceP : Infinity;
 
-            if (!pseudoMode) {
-                const petalDist   = findNearestPetalLattice(P).distanceP;
-                const phi2Dist    = Math.abs(P - Math.round(P / PHI_2) * PHI_2);
-                const piDist      = Math.abs(P - Math.round(P / piQuarter) * piQuarter);
-                const r7Dist      = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
-                const r8Dist      = Math.abs(P - (Math.round(P / PHI_2 - 0.5) + 0.5) * PHI_2);
+            const minNormalizedDist = Math.min(
+                petalDist      / TIGHT_TOLERANCE,
+                phi2Dist       / TIGHT_TOLERANCE,
+                piDist         / TOLERANCE,
+                r7Dist         / TIGHT_TOLERANCE,
+                r8Dist         / TIGHT_TOLERANCE,
+                dyadicDist     / PSEUDO_SHOULDER_TOLERANCE,
+                quarterDist    / PSEUDO_DIFFUSE_TOLERANCE + QUARTER_PSEUDO_BIAS,
+                empiricalDist  / (empirical ? empirical.shoulderTolerance : 1),
+            );
 
-                const minNormalizedDist = Math.min(
-                    petalDist   / TIGHT_TOLERANCE,
-                    phi2Dist    / TIGHT_TOLERANCE,
-                    piDist      / TOLERANCE,
-                    r7Dist      / TIGHT_TOLERANCE,
-                    r8Dist      / TIGHT_TOLERANCE,
-                );
-                return Math.exp(-minNormalizedDist);
-            } else {
-                const dyadicDist = findNearestPetalLattice(P, {
-                    scale: 2,
-                    maxPetals: PSEUDO_PETAL_MAX,
-                }).distanceP;
-                const quarter = findNearestPetalLattice(P, {
-                    scale: 4,
-                    maxPetals: QUARTER_PSEUDO_MAX,
-                });
-                const quarterDist = quarter ? quarter.distanceP : Infinity;
-                const empirical = findNearestEmpiricalPseudo(P);
-                const empiricalDist = empirical ? empirical.distanceP : Infinity;
-
-                const minNormalizedDist = Math.min(
-                    dyadicDist / PSEUDO_SHOULDER_TOLERANCE,
-                    quarterDist / PSEUDO_DIFFUSE_TOLERANCE,
-                    empiricalDist / (empirical ? empirical.shoulderTolerance : 1),
-                );
-
-                return Math.exp(-minNormalizedDist);
-            }
+            return Math.exp(-minNormalizedDist);
         }
         
         function getTourSpeed(x) {
@@ -906,21 +889,7 @@
                 }
             }
             
-            // Detect coherence based on mode
-            let displayCoherence;
-            
-            if (!pseudoMode) {
-                // True coherence mode - show true coherences only
-                displayCoherence = detectCoherence(numPetals);
-            } else {
-                // Pseudo coherence mode - show pseudo coherences only
-                const pseudo = detectPseudoCoherence(numPetals);
-                displayCoherence = pseudo || {
-                    type: 'unclear',
-                    label: 'Unclear',
-                    formula: ''
-                };
-            }
+            const displayCoherence = detectCoherence(numPetals);
             
             structureIndicator.className = 'structure-indicator ' + displayCoherence.type;
             structureIndicator.textContent = displayCoherence.label;
@@ -1115,11 +1084,6 @@
         });
         
         colorBtn.addEventListener('touchstart', (e) => e.stopPropagation());
-        
-        pseudoToggle.addEventListener('change', (e) => {
-            pseudoMode = e.target.checked;
-            draw(numPetals);
-        });
         
         window.addEventListener('resize', resizeCanvas);
         
