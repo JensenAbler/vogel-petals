@@ -477,7 +477,41 @@
         const TOLERANCE = 0.012;
         const TIGHT_TOLERANCE = 0.005;
         const PSEUDO_TOLERANCE = 0.003;
-        
+
+        // decompose(P, basis): express P/basis.alphaSq as a·ψ + b for the
+        // integer (a, b) minimizing the residual |P/alphaSq - a·ψ - b|.
+        //
+        // Theoretical basis (VogelSpiral.lean):
+        //   - `step_size_decomposition` proves P/αSq decomposes onto the
+        //     ℤ[ψ] lattice for P ∈ ℤ[ψ]; |a| equals the petal count.
+        //   - `offset_invariance` proves the integer b is invisible under
+        //     sin⁸ modulation (shifting P by αSq shifts step by an integer).
+        //
+        // The returned `residual` is the step-space distance to the nearest
+        // lattice point; multiply by basis.alphaSq to get distance in P.
+        // Not yet called — wired in by a later commit.
+        function decompose(P, basis, { aRange = 30 } = {}) {
+            const step = P / basis.alphaSq;
+            const b0 = Math.round(step);
+            let best = { a: 0, b: b0, residual: Math.abs(step - b0) };
+            for (let a = -aRange; a <= aRange; a++) {
+                const diff = step - a * basis.psi;
+                const b = Math.round(diff);
+                const residual = Math.abs(diff - b);
+                if (residual < best.residual) {
+                    best = { a, b, residual };
+                }
+            }
+            return best;
+        }
+
+        // Inverse of decompose: given (a, b) in the basis, return the P value
+        // (a·ψ + b)·αSq. Used by later commits to enumerate coherence centers
+        // from the lattice rather than hand-listing them.
+        function composeP(a, b, basis) {
+            return (a * basis.psi + b) * basis.alphaSq;
+        }
+
         // Fibonacci numbers for pseudo-coherence
         const F12 = 144;
         const F13 = 233;
