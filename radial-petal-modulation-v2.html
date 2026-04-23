@@ -517,6 +517,28 @@
                 strengthPeak: 0.5,
             },
             {
+                residue: ((1.74190601 % PHI_2) + PHI_2) % PHI_2,
+                count: 7,
+                coreTolerance: 0.00045,
+                shoulderTolerance: 0.0032,
+                strengthPeak: 0.5,
+            },
+            {
+                residue: ((1.74493601 % PHI_2) + PHI_2) % PHI_2,
+                type: 'spiral',
+                label: 'Core + spiral',
+                coreTolerance: 0.00045,
+                shoulderTolerance: 0.003,
+                strengthPeak: 0.44,
+            },
+            {
+                residue: ((1.74995601 % PHI_2) + PHI_2) % PHI_2,
+                count: 6,
+                coreTolerance: 0.00045,
+                shoulderTolerance: 0.0032,
+                strengthPeak: 0.48,
+            },
+            {
                 residue: ((3.0788 % PHI_2) + PHI_2) % PHI_2,
                 count: 4,
                 coreTolerance: 0.001,
@@ -678,10 +700,13 @@
                 const prefix = isCore
                     ? (empirical.corePrefix || 'Pseudo')
                     : (empirical.shoulderPrefix || 'Twisted pseudo');
+                const label = isCore
+                    ? (empirical.coreLabel || empirical.label)
+                    : (empirical.shoulderLabel || empirical.label);
                 candidates.push(makeCandidate(
-                    'pseudo',
-                    formatPetalLabel(empirical.count, prefix),
-                    empirical.formula,
+                    empirical.type || 'pseudo',
+                    label || formatPetalLabel(empirical.count, prefix),
+                    empirical.formulaLabel || empirical.formula,
                     empirical.distanceP,
                     isCore ? empirical.coreTolerance : empirical.shoulderTolerance,
                 ));
