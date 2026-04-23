@@ -473,6 +473,22 @@
         const PHI_4 = PHI_2 * PHI_2;                // φ⁴ ≈ 6.854
         const PHI_5 = PHI * PHI_4;                  // φ⁵ ≈ 11.09
         const PI = Math.PI;
+
+        // Discrete φⁿ coherences (Rule 5 half-disc centers). Unlike the other
+        // rules whose nearest-member is computed modulo a lattice spacing,
+        // φⁿ values are geometrically growing and isolated — the tour queries
+        // them against this fixed list. Both signs included so negative P is
+        // handled symmetrically (sin⁸ is even, so -φⁿ produces the same
+        // modulation pattern as +φⁿ).
+        const PHI_POWERS = (() => {
+            const arr = [];
+            let v = PHI_3;
+            for (let i = 0; i < 18; i++) {
+                arr.push(v, -v);
+                v *= PHI;
+            }
+            return arr;
+        })();
         
         const TOLERANCE = 0.012;
         const TIGHT_TOLERANCE = 0.005;
@@ -503,13 +519,6 @@
                 }
             }
             return best;
-        }
-
-        // Inverse of decompose: given (a, b) in the basis, return the P value
-        // (a·ψ + b)·αSq. Used by later commits to enumerate coherence centers
-        // from the lattice rather than hand-listing them.
-        function composeP(a, b, basis) {
-            return (a * basis.psi + b) * basis.alphaSq;
         }
 
         // Pseudo-coherence band: the range of step-to-lattice residuals that
@@ -779,97 +788,77 @@
         const MAX_SPEED_INCREASE_RATE = 2.0; // Can double speed per frame until cruise
         let lastTourSpeed = TOUR_CRUISE_SPEED;
         
-        // Smooth coherence field approach
-        function getAllCoherenceCenters() {
-            const centers = [];
-            
-            const add = (value, radius = TOLERANCE) => {
-                centers.push({ value, radius });
-            };
-            
+        // coherenceStrength(P): normalized distance from P to the nearest
+        // member of any coherence family, mapped through exp(-·) to [0, 1].
+        // Replaces the old enumerate-all-centers approach — each family has
+        // a closed-form "nearest member" via modular arithmetic (round-to-
+        // nearest in the appropriate basis), so the query is O(1) regardless
+        // of how large |P| gets. This is what makes the tour work for any P,
+        // positive or negative, with no upper bound on petal count.
+        //
+        // Each rule uses round-to-nearest in its natural basis:
+        //   Rule 1 (integer P):    round(P)
+        //   Rule 2 (nφ):           round(P/φ)·φ
+        //   Rule 3 (n/φ):          round(P·φ)/φ
+        //   Rule 4 (nφ²):          round(P/φ²)·φ²
+        //   Rule 5 (φⁿ):           discrete list PHI_POWERS
+        //   Rule 6 (nπ/4):         round(P/(π/4))·(π/4)
+        //   Rule 7 (n·½φ² + ½):    round((P-0.5)/(φ²/2))·(φ²/2) + 0.5
+        //   Rule 8 ((n+½)φ²):      (round(P/φ² - 0.5) + 0.5)·φ²
+        // Tolerance per rule preserves the old radii (TOLERANCE for loose
+        // modulation families, TIGHT_TOLERANCE for the ones requiring sharper
+        // alignment). The min over normalized distances + exp falloff gives
+        // strength ≈ 1 at a center and ≈ 0 between centers.
+        function coherenceStrength(P) {
+            const piQuarter = PI / 4;
+            const halfPhi2 = PHI_2 / 2;
+
             if (!pseudoMode) {
-                // True coherences only
+                const intDist     = Math.abs(P - Math.round(P));
+                const phiDist     = Math.abs(P - Math.round(P / PHI) * PHI);
+                const invPhiDist  = Math.abs(P - Math.round(P * PHI) / PHI);
+                const phi2Dist    = Math.abs(P - Math.round(P / PHI_2) * PHI_2);
+                const piDist      = Math.abs(P - Math.round(P / piQuarter) * piQuarter);
+                const r7Dist      = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
+                const r8Dist      = Math.abs(P - (Math.round(P / PHI_2 - 0.5) + 0.5) * PHI_2);
 
-                // Rule 1: integer P ∈ [3, 9] (direct modulation).
-                for (let n = 3; n <= 9; n++) {
-                    add(n, TOLERANCE);
-                }
-
-                // Rules 2, 3, 4, 5 — ℤ[φ] lattice points, enumerated by the
-                // (a, b) patterns that matchGoldenRule() recognizes. Centers
-                // come from composeP(a, b, GOLDEN_BASIS) so detection and
-                // navigation share the same source of truth.
-                const goldenFamilies = [
-                    // Rule 2: (n, -n), n ∈ [2, 6] — nφ centers
-                    { pairs: Array.from({ length: 5 }, (_, i) => [i + 2, -(i + 2)]),
-                      radius: TOLERANCE },
-                    // Rule 3: (2n, -3n), n ∈ [5, 15] — n/φ centers
-                    { pairs: Array.from({ length: 11 }, (_, i) => [2 * (i + 5), -3 * (i + 5)]),
-                      radius: TOLERANCE },
-                    // Rule 4: (0, n), n ∈ [1, 4] — nφ² centers
-                    { pairs: Array.from({ length: 4 }, (_, i) => [0, i + 1]),
-                      radius: TIGHT_TOLERANCE },
-                    // Rule 5: (Fib(n-2), Fib(n-3)) for n ∈ {3, 4, 5}
-                    { pairs: [[1, 0], [1, 1], [2, 1]],
-                      radius: TIGHT_TOLERANCE },
-                ];
-                for (const { pairs, radius } of goldenFamilies) {
-                    for (const [a, b] of pairs) {
-                        add(composeP(a, b, GOLDEN_BASIS), radius);
-                    }
+                let phiPowDist = Infinity;
+                for (const pp of PHI_POWERS) {
+                    const d = Math.abs(P - pp);
+                    if (d < phiPowDist) phiPowDist = d;
                 }
 
-                // Rule 7 / 8 — half-integer ½-shift centers. Not ℤ[φ] lattice
-                // points, so still enumerated explicitly.
-                const halfPhi2 = PHI_2 / 2;
-                for (let n = 2; n <= 7; n++) {
-                    add(n * halfPhi2 + 0.5, TIGHT_TOLERANCE);
-                }
-                for (let n = 1; n <= 3; n++) {
-                    add((n + 0.5) * PHI_2, TIGHT_TOLERANCE);
-                }
-
-                // Rule 6: π-family nπ/4 centers (separate mechanism).
-                const piQuarter = PI / 4;
-                for (let n = 4; n <= 12; n++) {
-                    add(n * piQuarter, TOLERANCE);
-                }
+                const minNormalizedDist = Math.min(
+                    intDist     / TOLERANCE,
+                    phiDist     / TOLERANCE,
+                    invPhiDist  / TOLERANCE,
+                    phi2Dist    / TIGHT_TOLERANCE,
+                    piDist      / TOLERANCE,
+                    r7Dist      / TIGHT_TOLERANCE,
+                    r8Dist      / TIGHT_TOLERANCE,
+                    phiPowDist  / TIGHT_TOLERANCE,
+                );
+                return Math.exp(-minNormalizedDist);
             } else {
-                // Pseudo-coherences only: near-misses to integer P ∈ [3, 8].
-                // Integer P = n maps to (a=-n, b=2n) on the ℤ[φ] lattice; a
-                // pseudo is the same lattice pattern with a small residual.
-                // The residualP ≈ φ·n/k for Fibonacci k (continued-fraction
-                // convergents of φ), so we enumerate k from PSEUDO_FIBS and
-                // place centers at base ± φ·base/k, filtered to the pseudo
-                // band. Unlike the old positive-only LADDER_* arrays, both
-                // sides of integer are included because the decompose-based
-                // detector recognizes either sign symmetrically.
-                for (let base = 3; base <= 8; base++) {
-                    for (const fm of PSEUDO_FIBS) {
-                        const offset = PHI * base / fm;
-                        if (offset < TIGHT_TOLERANCE) continue;     // merges into primary
-                        if (offset >= PSEUDO_BAND_MAX) continue;    // outside band
-                        add(base + offset, PSEUDO_TOLERANCE);
-                        add(base - offset, PSEUDO_TOLERANCE);
-                    }
+                // Pseudo: near-miss to integer P, peaked at residuals of the
+                // form φ·n/fm for Fibonacci fm (continued-fraction convergents
+                // of φ). Same shape as before but computed directly from the
+                // nearest-integer query, so any |n| works.
+                const nearestInt = Math.round(P);
+                const offset = Math.abs(P - nearestInt);
+                const n = Math.abs(nearestInt);
+                if (n < 3) return 0;
+                if (offset < TIGHT_TOLERANCE || offset >= PSEUDO_BAND_MAX) return 0;
+
+                let minFibDist = Infinity;
+                for (const fm of PSEUDO_FIBS) {
+                    const target = PHI * n / fm;
+                    if (target < TIGHT_TOLERANCE || target >= PSEUDO_BAND_MAX) continue;
+                    const d = Math.abs(offset - target);
+                    if (d < minFibDist) minFibDist = d;
                 }
+                return isFinite(minFibDist) ? Math.exp(-minFibDist / PSEUDO_TOLERANCE) : 0;
             }
-            
-            return centers;
-        }
-        
-        function coherenceStrength(x) {
-            const centers = getAllCoherenceCenters();
-            
-            let minNormalizedDist = Infinity;
-            for (const c of centers) {
-                const dist = Math.abs(x - c.value);
-                const normalized = dist / c.radius;
-                minNormalizedDist = Math.min(minNormalizedDist, normalized);
-            }
-            
-            // Exponential falloff: strength = 1 at center, ~0.37 at radius, ~0 beyond
-            return Math.exp(-minNormalizedDist);
         }
         
         function getTourSpeed(x) {
