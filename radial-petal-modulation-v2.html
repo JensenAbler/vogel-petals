@@ -1,0 +1,1236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Radial Petal Modulation v5</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600&family=Playfair+Display:wght@400;600&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        :root {
+            --bg-deep: #0a0a12;
+            --bg-surface: #12121f;
+            --text-primary: #e8e4dc;
+            --text-muted: #7a7880;
+            --accent-blue: #1a3a5c;
+            --accent-yellow: #f4d03f;
+            --accent-green: #4ade80;
+            --accent-purple: #a855f7;
+            --accent-cyan: #22d3ee;
+            --accent-orange: #fb923c;
+            --glow-blue: rgba(30, 90, 150, 0.4);
+            --glow-yellow: rgba(244, 208, 63, 0.3);
+        }
+        
+        html, body {
+            height: 100%;
+            overflow: hidden;
+            touch-action: none;
+        }
+        
+        body {
+            background: var(--bg-deep);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: ew-resize;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-weight: 400;
+            font-size: clamp(0.9rem, 2vw, 1.2rem);
+            letter-spacing: 0.08em;
+            margin-bottom: 0.2rem;
+            text-align: center;
+            background: linear-gradient(135deg, var(--text-primary) 0%, var(--accent-yellow) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            pointer-events: none;
+        }
+        
+        .subtitle {
+            font-size: 0.5rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.3em;
+            margin-bottom: 0.5rem;
+            pointer-events: none;
+        }
+        
+        .canvas-container {
+            position: relative;
+            width: min(50vw, 45vh, 320px);
+            height: min(50vw, 45vh, 320px);
+            margin-bottom: 0.6rem;
+        }
+        
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(ellipse at center, var(--bg-surface) 0%, var(--bg-deep) 70%);
+            box-shadow: 
+                0 0 40px var(--glow-blue),
+                inset 0 0 60px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+        
+        .controls {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+            pointer-events: none;
+        }
+        
+        .value-display {
+            font-size: clamp(1.4rem, 5vw, 2.2rem);
+            font-weight: 600;
+            font-family: 'JetBrains Mono', monospace;
+            background: linear-gradient(90deg, var(--accent-blue) 0%, var(--accent-yellow) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 0 30px var(--glow-yellow);
+            pointer-events: none;
+        }
+        
+        .structure-indicator {
+            font-size: 0.55rem;
+            padding: 0.3rem 0.8rem;
+            border-radius: 2rem;
+            transition: opacity 0.15s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            pointer-events: none;
+            max-width: 90vw;
+            text-align: center;
+        }
+        
+        .structure-indicator.half-disc {
+            background: rgba(244, 208, 63, 0.2);
+            color: var(--accent-yellow);
+            box-shadow: 0 0 15px var(--glow-yellow);
+        }
+        
+        .structure-indicator.all-to-center {
+            background: rgba(168, 85, 247, 0.2);
+            color: var(--accent-purple);
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+        
+        .structure-indicator.petals {
+            background: rgba(74, 222, 128, 0.2);
+            color: var(--accent-green);
+            box-shadow: 0 0 15px rgba(74, 222, 128, 0.4);
+        }
+        
+        .structure-indicator.pi-coherent {
+            background: rgba(34, 211, 238, 0.2);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
+        }
+        
+        .structure-indicator.spiral {
+            background: rgba(168, 85, 247, 0.2);
+            color: #a855f7;
+            box-shadow: 0 0 15px rgba(168, 85, 247, 0.4);
+        }
+        
+        .structure-indicator.pseudo {
+            background: rgba(251, 191, 36, 0.15);
+            color: #fbbf24;
+            box-shadow: 0 0 10px rgba(251, 191, 36, 0.3);
+            border: 1px dashed rgba(251, 191, 36, 0.4);
+        }
+        
+        .pseudo-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            font-size: 0.55rem;
+            color: var(--text-muted);
+            cursor: pointer;
+            pointer-events: auto;
+            padding: 0.3rem 0.5rem;
+            background: rgba(251, 191, 36, 0.1);
+            border-radius: 0.3rem;
+            transition: all 0.2s ease;
+        }
+        
+        .pseudo-toggle:hover {
+            background: rgba(251, 191, 36, 0.2);
+        }
+        
+        .pseudo-toggle input {
+            width: 14px;
+            height: 14px;
+            accent-color: #fbbf24;
+            cursor: pointer;
+        }
+        
+        .toggle-label {
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .structure-indicator.conch {
+            background: rgba(251, 146, 60, 0.2);
+            color: var(--accent-orange);
+            box-shadow: 0 0 15px rgba(251, 146, 60, 0.4);
+        }
+        
+        .structure-indicator.unclear {
+            background: rgba(120, 120, 128, 0.1);
+            color: var(--text-muted);
+        }
+        
+        .label-container {
+            min-height: 3.2em;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .formula-display {
+            font-size: 0.5rem;
+            color: var(--text-muted);
+            margin-top: 0.2rem;
+            pointer-events: none;
+            min-height: 1em;
+        }
+        
+        .granularity-controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 0.3rem;
+            margin-top: 0.3rem;
+            pointer-events: auto;
+            max-width: 350px;
+        }
+        
+        .granularity-btn {
+            background: var(--bg-surface);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.55rem;
+            padding: 0.35rem 0.5rem;
+            border-radius: 0.4rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+        }
+        
+        .granularity-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .granularity-btn.active {
+            background: rgba(244, 208, 63, 0.15);
+            border-color: var(--accent-yellow);
+            color: var(--accent-yellow);
+            box-shadow: 0 0 15px var(--glow-yellow);
+        }
+        
+        .play-btn {
+            background: var(--bg-surface);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-top: 0.4rem;
+            pointer-events: auto;
+        }
+        
+        .play-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .play-btn.playing {
+            background: rgba(244, 208, 63, 0.15);
+            border-color: var(--accent-yellow);
+            color: var(--accent-yellow);
+            box-shadow: 0 0 20px var(--glow-yellow);
+        }
+        
+        .play-btn .pause-icon {
+            display: none;
+            font-size: 0.65rem;
+            letter-spacing: 2px;
+        }
+        
+        .play-btn.playing .play-icon {
+            display: none;
+        }
+        
+        .play-btn.playing .pause-icon {
+            display: inline;
+        }
+        
+        .tour-btn {
+            background: var(--bg-surface);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.5rem;
+            padding: 0.5rem 0.8rem;
+            border-radius: 2rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            touch-action: manipulation;
+            pointer-events: auto;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        
+        .tour-btn:hover {
+            background: rgba(255, 255, 255, 0.05);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .tour-btn.active {
+            background: rgba(34, 211, 238, 0.15);
+            border-color: var(--accent-cyan);
+            color: var(--accent-cyan);
+            box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
+        }
+        
+        .playback-controls {
+            display: flex;
+            gap: 0.6rem;
+            align-items: center;
+            margin-top: 0.4rem;
+        }
+        
+        .drag-hint {
+            position: fixed;
+            bottom: 0.8rem;
+            font-size: 0.5rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            opacity: 0.6;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        
+        .drag-hint::before,
+        .drag-hint::after {
+            content: '←';
+            font-size: 0.6rem;
+        }
+        
+        .drag-hint::after {
+            content: '→';
+        }
+        
+        .drag-indicator {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 100vw;
+            height: 4px;
+            background: linear-gradient(90deg, 
+                transparent 0%, 
+                var(--accent-blue) 20%, 
+                var(--accent-yellow) 80%, 
+                transparent 100%
+            );
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+        }
+        
+        .drag-indicator.active {
+            opacity: 0.3;
+        }
+        
+        .range-display {
+            font-size: 0.5rem;
+            color: var(--text-muted);
+            display: flex;
+            justify-content: space-between;
+            width: 140px;
+            margin-top: 0.2rem;
+            pointer-events: none;
+        }
+        
+        .particle-tooltip {
+            position: fixed;
+            background: var(--bg-surface);
+            border: 1px solid var(--accent-yellow);
+            color: var(--text-primary);
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.7rem;
+            padding: 0.4rem 0.6rem;
+            border-radius: 0.3rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s ease;
+            z-index: 1000;
+            box-shadow: 0 0 10px var(--glow-yellow);
+        }
+        
+        .particle-tooltip.visible {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body>
+    <h1>Radial Petal Modulation</h1>
+    <p class="subtitle">Golden Angle Spiral × Sinusoidal Shaping</p>
+    
+    <div class="canvas-container">
+        <canvas id="canvas"></canvas>
+    </div>
+    
+    <div class="controls">
+        <div class="value-display" id="valueDisplay">3.00</div>
+        <div class="range-display">
+            <span>–∞</span>
+            <span>+∞</span>
+        </div>
+        <div class="label-container">
+            <div class="structure-indicator unclear" id="structureIndicator">UNCLEAR</div>
+            <div class="formula-display" id="formulaDisplay"></div>
+        </div>
+        
+        <div class="granularity-controls">
+            <button class="granularity-btn" data-step="0.1">0.1</button>
+            <button class="granularity-btn active" data-step="0.01">0.01</button>
+            <button class="granularity-btn" data-step="0.001">0.001</button>
+            <button class="granularity-btn" data-step="0.0001">0.0001</button>
+            <button class="granularity-btn" data-step="0.00001">0.00001</button>
+            <button class="granularity-btn" data-step="0.000001">0.000001</button>
+        </div>
+        
+        <button class="play-btn" id="playBtn">
+            <span class="play-icon">▶</span>
+            <span class="pause-icon">❚❚</span>
+        </button>
+        
+        <div class="playback-controls">
+            <button class="tour-btn" id="tourBtn">🎯 Coherence Tour</button>
+            <button class="tour-btn" id="colorBtn">🎨 Birth Order Colors</button>
+            <label class="pseudo-toggle">
+                <input type="checkbox" id="pseudoToggle">
+                <span class="toggle-label">Pseudo Coherence Mode</span>
+            </label>
+        </div>
+    </div>
+    
+    <div class="drag-indicator" id="dragIndicator"></div>
+    <div class="drag-hint">Drag anywhere to adjust</div>
+    <div class="particle-tooltip" id="particleTooltip"></div>
+    
+    <script>
+        // Constants
+        const PHI = (1 + Math.sqrt(5)) / 2;       // φ ≈ 1.618
+        const PHI_2 = PHI * PHI;                   // φ² ≈ 2.618
+        const PHI_3 = PHI * PHI * PHI;             // φ³ ≈ 4.236
+        const PHI_4 = PHI * PHI * PHI * PHI;       // φ⁴ ≈ 6.854
+        const PHI_5 = PHI * PHI * PHI * PHI * PHI; // φ⁵ ≈ 11.09
+        const PI = Math.PI;
+        
+        const TOLERANCE = 0.012;
+        const TIGHT_TOLERANCE = 0.005;
+        const PSEUDO_TOLERANCE = 0.003;
+        
+        // Fibonacci numbers for pseudo-coherence
+        const F12 = 144;
+        const F13 = 233;
+        const F14 = 377;
+        
+        // Pseudo-coherence k-value ladders
+        // Solid zone (numPetals 3-6): based on F12 = 144
+        const LADDER_A = [144, 216, 324, 486];      // 144 × (3/2)^n - half-disc, 5-petal
+        const LADDER_B = [176, 264, 396];           // 176 × (3/2)^n - 4-petal, 2-petal  
+        const LADDER_PHI = [233, 350, 524];         // 233 × (3/2)^n - conch, spiral
+        
+        // Disruption zone (numPetals 7-8): based on F13 and F14
+        const LADDER_F13 = [155, 233, 350];         // F13 ladder
+        const LADDER_F14 = [251, 377, 566];         // F14 ladder
+        
+        function detectPseudoCoherence(x) {
+            const numPetalsInt = Math.floor(x);
+            const offset = x - numPetalsInt;
+            
+            // Only check positive offsets for now (post-integer pseudo-coherences)
+            if (offset < 0.005 || offset > 0.25) return null;
+            
+            const isSolidZone = numPetalsInt >= 3 && numPetalsInt <= 6;
+            const isDisruptionZone = numPetalsInt >= 7 && numPetalsInt <= 8;
+            
+            if (!isSolidZone && !isDisruptionZone) return null;
+            
+            let ladders, minK;
+            
+            if (isSolidZone) {
+                ladders = [...LADDER_A, ...LADDER_B, ...LADDER_PHI];
+                minK = 36 * numPetalsInt;
+            } else {
+                ladders = [...LADDER_F13, ...LADDER_F14];
+                minK = 30 * numPetalsInt;
+            }
+            
+            // Filter ladders by minimum k
+            ladders = ladders.filter(k => k >= minK);
+            
+            // Check each k value
+            for (const k of ladders) {
+                const expectedOffset = PHI * numPetalsInt / k;
+                const distance = Math.abs(offset - expectedOffset);
+                
+                if (distance < PSEUDO_TOLERANCE) {
+                    // Determine pseudo type based on which ladder
+                    let pseudoType = 'pseudo-spiral';
+                    let formula = `k=${k}`;
+                    
+                    if (LADDER_A.includes(k)) {
+                        if (k === 216) pseudoType = 'pseudo-half-disc';
+                        else pseudoType = 'pseudo-petals';
+                        formula = `F₁₂×${(k/144).toFixed(2)}`;
+                    } else if (LADDER_B.includes(k)) {
+                        pseudoType = 'pseudo-petals';
+                        formula = `F₁₂×${(k/144).toFixed(2)}`;
+                    } else if (LADDER_PHI.includes(k)) {
+                        if (k === 233 || k === 350) pseudoType = 'pseudo-conch';
+                        else pseudoType = 'pseudo-spiral';
+                        formula = `F₁₃×${(k/233).toFixed(2)}`;
+                    } else if (LADDER_F13.includes(k)) {
+                        pseudoType = 'pseudo-spiral';
+                        formula = `F₁₃×${(k/233).toFixed(2)}`;
+                    } else if (LADDER_F14.includes(k)) {
+                        if (k === 251) pseudoType = 'pseudo-half-disc';
+                        else pseudoType = 'pseudo-petals';
+                        formula = `F₁₄×${(k/377).toFixed(2)}`;
+                    }
+                    
+                    return {
+                        type: 'pseudo',
+                        label: pseudoType.replace('pseudo-', 'Pseudo '),
+                        formula: `${numPetalsInt}+φ×${numPetalsInt}/${k}`,
+                        k: k
+                    };
+                }
+            }
+            
+            return null;
+        }
+        
+        function detectCoherence(x) {
+            let bestMatch = null;
+            let bestDistance = Infinity;
+            
+            // Rule 1: numPetals = n (integer) → n petals
+            const nearestInt = Math.round(x);
+            const intDistance = Math.abs(x - nearestInt);
+            if (intDistance < TOLERANCE && nearestInt >= 3 && nearestInt <= 9) {
+                if (intDistance < bestDistance) {
+                    bestDistance = intDistance;
+                    bestMatch = {
+                        type: 'petals',
+                        label: `${nearestInt} petals`,
+                        formula: `${nearestInt}`
+                    };
+                }
+            }
+            
+            // Rule 2: numPetals = nφ → n petals
+            const nPhi = x / PHI;
+            const nearestNPhi = Math.round(nPhi);
+            const nPhiDistance = Math.abs(x - nearestNPhi * PHI);
+            if (nPhiDistance < TOLERANCE && nearestNPhi >= 2 && nearestNPhi <= 6) {
+                if (nPhiDistance < bestDistance) {
+                    bestDistance = nPhiDistance;
+                    bestMatch = {
+                        type: 'petals',
+                        label: `${nearestNPhi} petals`,
+                        formula: `${nearestNPhi}φ`
+                    };
+                }
+            }
+            
+            // Rule 3: numPetals = n/φ → 2n petals
+            const nOverPhi = x * PHI;
+            const nearestNOverPhi = Math.round(nOverPhi);
+            const nOverPhiDistance = Math.abs(x - nearestNOverPhi / PHI);
+            if (nOverPhiDistance < TOLERANCE && nearestNOverPhi >= 5 && nearestNOverPhi <= 15) {
+                if (nOverPhiDistance < bestDistance) {
+                    bestDistance = nOverPhiDistance;
+                    bestMatch = {
+                        type: 'petals',
+                        label: `${nearestNOverPhi * 2} petals`,
+                        formula: `${nearestNOverPhi}/φ`
+                    };
+                }
+            }
+            
+            // Rule 4: numPetals = nφ² → all-to-center
+            const nPhi2 = x / PHI_2;
+            const nearestNPhi2 = Math.round(nPhi2);
+            const nPhi2Distance = Math.abs(x - nearestNPhi2 * PHI_2);
+            if (nPhi2Distance < TIGHT_TOLERANCE && nearestNPhi2 >= 1 && nearestNPhi2 <= 4) {
+                if (nPhi2Distance < bestDistance) {
+                    bestDistance = nPhi2Distance;
+                    bestMatch = {
+                        type: 'all-to-center',
+                        label: 'All-to-center',
+                        formula: `${nearestNPhi2}φ²`
+                    };
+                }
+            }
+            
+            // Rule 5: numPetals = φⁿ⁺² (φ³, φ⁴, φ⁵...) → half-disc
+            const phiPowers = [
+                { power: 3, value: PHI_3, label: 'φ³' },
+                { power: 4, value: PHI_4, label: 'φ⁴' },
+                { power: 5, value: PHI_5, label: 'φ⁵' }
+            ];
+            
+            for (const pp of phiPowers) {
+                const ppDistance = Math.abs(x - pp.value);
+                if (ppDistance < TIGHT_TOLERANCE) {
+                    if (ppDistance < bestDistance) {
+                        bestDistance = ppDistance;
+                        bestMatch = {
+                            type: 'half-disc',
+                            label: 'Half-disc',
+                            formula: pp.label
+                        };
+                    }
+                }
+            }
+            
+            // Rule 7: numPetals = (n/2)φ² + 0.5 → half-disc (n = 1, 2, 3, 4, 5, 6...)
+            // This means multiples of 0.5φ²: 0.5φ², 1φ², 1.5φ², 2φ², 2.5φ², 3φ²... all shifted by +0.5
+            const halfPhi2 = PHI_2 / 2;  // 0.5φ² ≈ 1.309
+            const nHalfPhi2PlusHalf = (x - 0.5) / halfPhi2;
+            const nearestNHalfPhi2 = Math.round(nHalfPhi2PlusHalf);
+            const nHalfPhi2Distance = Math.abs(x - (nearestNHalfPhi2 * halfPhi2 + 0.5));
+            if (nHalfPhi2Distance < TIGHT_TOLERANCE && nearestNHalfPhi2 >= 2 && nearestNHalfPhi2 <= 7) {
+                if (nHalfPhi2Distance < bestDistance) {
+                    bestDistance = nHalfPhi2Distance;
+                    // Format the label nicely
+                    let label;
+                    if (nearestNHalfPhi2 % 2 === 0) {
+                        label = `${nearestNHalfPhi2 / 2}φ² + ½`;
+                    } else {
+                        label = `${nearestNHalfPhi2}/2·φ² + ½`;
+                    }
+                    bestMatch = {
+                        type: 'half-disc',
+                        label: 'Half-disc',
+                        formula: label
+                    };
+                }
+            }
+            
+            // Rule 8: (n + 0.5)φ² → spirals (half-integer multiples of φ²)
+            const nPlusHalfPhi2 = x / PHI_2;
+            const fractionalPart = nPlusHalfPhi2 - Math.floor(nPlusHalfPhi2);
+            // Check if close to .5 (half-integer)
+            if (Math.abs(fractionalPart - 0.5) < 0.005) {
+                const nearestHalfInt = Math.floor(nPlusHalfPhi2) + 0.5;
+                const halfIntPhi2Distance = Math.abs(x - nearestHalfInt * PHI_2);
+                if (halfIntPhi2Distance < TIGHT_TOLERANCE && nearestHalfInt >= 1.5 && nearestHalfInt <= 3.5) {
+                    if (halfIntPhi2Distance < bestDistance) {
+                        bestDistance = halfIntPhi2Distance;
+                        const nVal = nearestHalfInt - 0.5;
+                        bestMatch = {
+                            type: 'spiral',
+                            label: 'Spirals',
+                            formula: `${nVal}½φ²`
+                        };
+                    }
+                }
+            }
+            
+            // Rule 5b: Conch shells very close to φ³ or φ⁴
+            const phi3Distance = Math.abs(x - PHI_3);
+            const phi4Distance = Math.abs(x - PHI_4);
+            
+            if (phi3Distance < TOLERANCE && phi3Distance >= TIGHT_TOLERANCE) {
+                const side = x < PHI_3 ? 'point-cloud' : 'spiral';
+                if (phi3Distance < bestDistance) {
+                    bestDistance = phi3Distance;
+                    bestMatch = {
+                        type: 'conch',
+                        label: `Conch (${side})`,
+                        formula: `φ³ ${x < PHI_3 ? '-' : '+'} ${phi3Distance.toFixed(4)}`
+                    };
+                }
+            }
+            
+            if (phi4Distance < TOLERANCE && phi4Distance >= TIGHT_TOLERANCE) {
+                const side = x < PHI_4 ? 'point-cloud' : 'spiral';
+                if (phi4Distance < bestDistance) {
+                    bestDistance = phi4Distance;
+                    bestMatch = {
+                        type: 'conch',
+                        label: `Conch (${side})`,
+                        formula: `φ⁴ ${x < PHI_4 ? '-' : '+'} ${phi4Distance.toFixed(4)}`
+                    };
+                }
+            }
+            
+            // Rule 6: numPetals = nπ/4 → spirals/dual-spokes
+            const piQuarter = PI / 4;
+            const nearestPiN = Math.round(x / piQuarter);
+            const piDistance = Math.abs(x - nearestPiN * piQuarter);
+            if (piDistance < TOLERANCE && nearestPiN >= 4 && nearestPiN <= 12) {
+                if (piDistance < bestDistance) {
+                    bestDistance = piDistance;
+                    
+                    // Determine spiral type based on which multiple
+                    let piLabel;
+                    let spiralType;
+                    
+                    if (nearestPiN % 4 === 0) {
+                        // Integer multiple of π
+                        piLabel = `${nearestPiN / 4}π`;
+                        spiralType = 'Dual-spokes';
+                    } else if (nearestPiN % 2 === 0) {
+                        // Half-integer multiple of π (nπ/2)
+                        piLabel = `${nearestPiN / 2}π/2`;
+                        spiralType = 'Dual-spokes';
+                    } else {
+                        // Quarter multiple of π (nπ/4)
+                        piLabel = `${nearestPiN}π/4`;
+                        spiralType = 'Spiral + dark core';
+                    }
+                    
+                    bestMatch = {
+                        type: 'pi-coherent',
+                        label: spiralType,
+                        formula: piLabel
+                    };
+                }
+            }
+            
+            // Default: unclear
+            if (!bestMatch) {
+                return {
+                    type: 'unclear',
+                    label: 'Unclear',
+                    formula: ''
+                };
+            }
+            
+            return bestMatch;
+        }
+        
+        // Canvas and rendering setup
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const valueDisplay = document.getElementById('valueDisplay');
+        const structureIndicator = document.getElementById('structureIndicator');
+        const formulaDisplay = document.getElementById('formulaDisplay');
+        const dragIndicator = document.getElementById('dragIndicator');
+        const granularityBtns = document.querySelectorAll('.granularity-btn');
+        const playBtn = document.getElementById('playBtn');
+        const tourBtn = document.getElementById('tourBtn');
+        const colorBtn = document.getElementById('colorBtn');
+        const pseudoToggle = document.getElementById('pseudoToggle');
+        
+        // State
+        let numPetals = 3.0;
+        let step = 0.01;
+        let isDragging = false;
+        let lastX = 0;
+        let isPlaying = true; // Start playing by default
+        let isTourMode = true; // Start in tour mode by default
+        let pseudoMode = false; // When true, show ONLY pseudo coherences
+        let colorByBirthOrder = false; // When true, use blue-to-red gradient instead of petalShape
+        let animationId = null;
+        let lastFrameTime = 0;
+        const FRAME_INTERVAL = 1000 / 60;
+        
+        // Tour mode settings
+        const TOUR_CRUISE_SPEED = 0.004;
+        const TOUR_PEAK_SPEED = 0.000001;
+        const TOUR_MAX_STEP = 0.015;
+        const MAX_SPEED_INCREASE_RATE = 2.0; // Can double speed per frame until cruise
+        let lastTourSpeed = TOUR_CRUISE_SPEED;
+        
+        // Smooth coherence field approach
+        function getAllCoherenceCenters() {
+            const centers = [];
+            
+            const add = (value, radius = TOLERANCE) => {
+                centers.push({ value, radius });
+            };
+            
+            if (!pseudoMode) {
+                // True coherences only
+                
+                // Integers (3-9)
+                for (let n = 3; n <= 9; n++) {
+                    add(n, TOLERANCE);
+                }
+                
+                // nφ multiples (n=2..6)
+                for (let n = 2; n <= 6; n++) {
+                    add(n * PHI, TOLERANCE);
+                }
+                
+                // n/φ divisions (n=5..15)
+                for (let n = 5; n <= 15; n++) {
+                    add(n / PHI, TOLERANCE);
+                }
+                
+                // nφ² multiples - all-to-center (n=1..4)
+                for (let n = 1; n <= 4; n++) {
+                    add(n * PHI_2, TIGHT_TOLERANCE);
+                }
+                
+                // φ powers - half-disc
+                add(PHI_3, TIGHT_TOLERANCE);
+                add(PHI_4, TIGHT_TOLERANCE);
+                add(PHI_5, TIGHT_TOLERANCE);
+                
+                // (n/2)φ² + 0.5 half-disc variants (n=2..7)
+                const halfPhi2 = PHI_2 / 2;
+                for (let n = 2; n <= 7; n++) {
+                    add(n * halfPhi2 + 0.5, TIGHT_TOLERANCE);
+                }
+                
+                // (n + 0.5)φ² spirals (n=1..3)
+                for (let n = 1; n <= 3; n++) {
+                    add((n + 0.5) * PHI_2, TIGHT_TOLERANCE);
+                }
+                
+                // π-based: nπ/4 (n=4..12)
+                const piQuarter = PI / 4;
+                for (let n = 4; n <= 12; n++) {
+                    add(n * piQuarter, TOLERANCE);
+                }
+            } else {
+                // Pseudo-coherences only
+                for (let base = 3; base <= 8; base++) {
+                    const isSolid = base <= 6;
+                    const ladders = isSolid 
+                        ? [...LADDER_A, ...LADDER_B, ...LADDER_PHI]
+                        : [...LADDER_F13, ...LADDER_F14];
+                    const minK = isSolid ? 36 * base : 30 * base;
+                    
+                    for (const k of ladders) {
+                        if (k >= minK) {
+                            const offset = PHI * base / k;
+                            add(base + offset, PSEUDO_TOLERANCE);
+                        }
+                    }
+                }
+            }
+            
+            return centers;
+        }
+        
+        function coherenceStrength(x) {
+            const centers = getAllCoherenceCenters();
+            
+            let minNormalizedDist = Infinity;
+            for (const c of centers) {
+                const dist = Math.abs(x - c.value);
+                const normalized = dist / c.radius;
+                minNormalizedDist = Math.min(minNormalizedDist, normalized);
+            }
+            
+            // Exponential falloff: strength = 1 at center, ~0.37 at radius, ~0 beyond
+            return Math.exp(-minNormalizedDist);
+        }
+        
+        function getTourSpeed(x) {
+            const strength = coherenceStrength(x);
+            // Log interpolation for the large speed range
+            const logPeak = Math.log(TOUR_PEAK_SPEED);
+            const logCruise = Math.log(TOUR_CRUISE_SPEED);
+            const logSpeed = logCruise + (logPeak - logCruise) * strength;
+            let targetSpeed = Math.min(Math.exp(logSpeed), TOUR_MAX_STEP);
+            
+            // Cap acceleration rate, but only while below cruise
+            if (targetSpeed > lastTourSpeed && lastTourSpeed < TOUR_CRUISE_SPEED) {
+                targetSpeed = Math.min(lastTourSpeed * MAX_SPEED_INCREASE_RATE, TOUR_CRUISE_SPEED);
+            }
+            
+            lastTourSpeed = targetSpeed;
+            return targetSpeed;
+        }
+        
+        let currentParticles = [];
+        
+        const dpr = window.devicePixelRatio || 1;
+        let size;
+        
+        function resizeCanvas() {
+            size = Math.min(window.innerWidth * 0.5, window.innerHeight * 0.45, 320);
+            canvas.width = size * dpr;
+            canvas.height = size * dpr;
+            canvas.style.width = size + 'px';
+            canvas.style.height = size + 'px';
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(dpr, dpr);
+            draw(numPetals);
+        }
+        
+        const TOTAL_PARTICLES = 1000;
+        const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
+        
+        function getColor(petalShape, birthIndex) {
+            if (colorByBirthOrder) {
+                // Blue to red gradient based on birth order (0-999)
+                const t = birthIndex / TOTAL_PARTICLES;
+                const r = Math.round(t * 255);
+                const g = 0;
+                const b = Math.round((1 - t) * 255);
+                return `rgb(${r}, ${g}, ${b})`;
+            } else {
+                // Original petalShape-based color
+                const t = (petalShape - 0.2) / 0.8;
+                const r = Math.round(20 + t * (244 - 20));
+                const g = Math.round(50 + t * (208 - 50));
+                const b = Math.round(90 + t * (63 - 90));
+                return `rgb(${r}, ${g}, ${b})`;
+            }
+        }
+        
+        function draw(numPetals) {
+            const maxRadius = size * 0.45;
+            const center = size / 2;
+            
+            ctx.clearRect(0, 0, size, size);
+            
+            const particles = [];
+            
+            for (let i = 0; i < TOTAL_PARTICLES; i++) {
+                const theta = i * GOLDEN_ANGLE;
+                const baseRadius = Math.sqrt(i / TOTAL_PARTICLES) * maxRadius;
+                
+                const petalAngle = theta * numPetals;
+                const sinVal = Math.sin(petalAngle / 2);
+                const petalShape = Math.pow(Math.abs(sinVal), 8) * 0.8 + 0.2;
+                
+                const finalRadius = baseRadius * petalShape;
+                
+                const x = center + finalRadius * Math.cos(theta);
+                const y = center + finalRadius * Math.sin(theta);
+                
+                particles.push({
+                    i,
+                    x,
+                    y,
+                    r: finalRadius,
+                    angle: theta % (2 * Math.PI),
+                    petalShape
+                });
+                
+                const particleSize = 2 + petalShape * 2;
+                ctx.beginPath();
+                ctx.arc(x, y, particleSize, 0, Math.PI * 2);
+                ctx.fillStyle = getColor(petalShape, i);
+                ctx.fill();
+                
+                if (petalShape > 0.7) {
+                    ctx.beginPath();
+                    ctx.arc(x, y, particleSize * 2, 0, Math.PI * 2);
+                    const alpha = (petalShape - 0.7) * 0.5;
+                    ctx.fillStyle = `rgba(244, 208, 63, ${alpha})`;
+                    ctx.fill();
+                }
+            }
+            
+            // Detect coherence based on mode
+            let displayCoherence;
+            
+            if (!pseudoMode) {
+                // True coherence mode - show true coherences only
+                displayCoherence = detectCoherence(numPetals);
+            } else {
+                // Pseudo coherence mode - show pseudo coherences only
+                const pseudo = detectPseudoCoherence(numPetals);
+                displayCoherence = pseudo || {
+                    type: 'unclear',
+                    label: 'Unclear',
+                    formula: ''
+                };
+            }
+            
+            structureIndicator.className = 'structure-indicator ' + displayCoherence.type;
+            structureIndicator.textContent = displayCoherence.label;
+            formulaDisplay.textContent = displayCoherence.formula;
+            
+            // Calculate label opacity
+            let labelOpacity;
+            if (displayCoherence.type === 'unclear') {
+                // No coherence - fade out
+                labelOpacity = 0;
+            } else if (isTourMode) {
+                // In tour mode, fade based on coherence strength
+                // This syncs with the slowdown - labels fade in as we slow down
+                const strength = coherenceStrength(numPetals);
+                // strength 1 = opacity 1, strength ~0.37 = opacity ~0.5
+                labelOpacity = Math.max(0.1, strength);
+            } else {
+                // Not in tour mode - instant on when coherent
+                labelOpacity = 1;
+            }
+            
+            structureIndicator.style.opacity = labelOpacity;
+            formulaDisplay.style.opacity = labelOpacity;
+            
+            currentParticles = particles;
+        }
+        
+        function updateValue(delta) {
+            numPetals = numPetals + delta;
+            
+            let decimals = 1;
+            if (step === 0.01) decimals = 2;
+            else if (step === 0.001) decimals = 3;
+            else if (step === 0.0001) decimals = 4;
+            else if (step === 0.00001) decimals = 5;
+            else if (step === 0.000001) decimals = 6;
+            
+            valueDisplay.textContent = numPetals.toFixed(decimals);
+            draw(numPetals);
+        }
+        
+        function getX(e) {
+            if (e.touches && e.touches.length > 0) {
+                return e.touches[0].clientX;
+            }
+            return e.clientX;
+        }
+        
+        function startDrag(e) {
+            if (e.target.classList.contains('granularity-btn')) return;
+            if (e.target.closest('.play-btn')) return;
+            
+            if (isPlaying) {
+                togglePlay();
+            }
+            
+            isDragging = true;
+            lastX = getX(e);
+            dragIndicator.classList.add('active');
+            e.preventDefault();
+        }
+        
+        function moveDrag(e) {
+            if (!isDragging) return;
+            
+            const currentX = getX(e);
+            const deltaX = currentX - lastX;
+            
+            const sensitivity = 5;
+            const steps = deltaX / sensitivity;
+            
+            if (Math.abs(steps) >= 1) {
+                const wholeSteps = Math.trunc(steps);
+                updateValue(wholeSteps * step);
+                lastX = currentX - (steps - wholeSteps) * sensitivity;
+            }
+            
+            e.preventDefault();
+        }
+        
+        function endDrag(e) {
+            isDragging = false;
+            dragIndicator.classList.remove('active');
+        }
+        
+        document.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', moveDrag);
+        document.addEventListener('mouseup', endDrag);
+        document.addEventListener('mouseleave', endDrag);
+        
+        document.addEventListener('touchstart', startDrag, { passive: false });
+        document.addEventListener('touchmove', moveDrag, { passive: false });
+        document.addEventListener('touchend', endDrag);
+        document.addEventListener('touchcancel', endDrag);
+        
+        granularityBtns.forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                granularityBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                step = parseFloat(btn.dataset.step);
+                
+                let decimals = 1;
+                if (step === 0.01) decimals = 2;
+                else if (step === 0.001) decimals = 3;
+                else if (step === 0.0001) decimals = 4;
+                else if (step === 0.00001) decimals = 5;
+                else if (step === 0.000001) decimals = 6;
+                valueDisplay.textContent = numPetals.toFixed(decimals);
+            });
+            
+            btn.addEventListener('touchstart', (e) => e.stopPropagation());
+        });
+        
+        document.addEventListener('contextmenu', (e) => e.preventDefault());
+        
+        function animate(currentTime) {
+            if (!isPlaying) return;
+            
+            if (currentTime - lastFrameTime >= FRAME_INTERVAL) {
+                lastFrameTime = currentTime;
+                
+                let currentStep;
+                
+                if (isTourMode) {
+                    // Tour mode: speed varies based on coherence field strength
+                    currentStep = getTourSpeed(numPetals);
+                } else {
+                    // Normal mode: constant speed
+                    currentStep = step;
+                }
+                
+                numPetals += currentStep;
+                
+                let decimals = 1;
+                if (step === 0.01 || isTourMode) decimals = 2;
+                else if (step === 0.001) decimals = 3;
+                else if (step === 0.0001) decimals = 4;
+                else if (step === 0.00001) decimals = 5;
+                else if (step === 0.000001) decimals = 6;
+                
+                valueDisplay.textContent = numPetals.toFixed(decimals);
+                draw(numPetals);
+            }
+            
+            animationId = requestAnimationFrame(animate);
+        }
+        
+        function togglePlay() {
+            isPlaying = !isPlaying;
+            playBtn.classList.toggle('playing', isPlaying);
+            
+            if (isPlaying) {
+                lastFrameTime = performance.now();
+                animationId = requestAnimationFrame(animate);
+            } else if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+        
+        playBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            togglePlay();
+        });
+        
+        playBtn.addEventListener('touchstart', (e) => e.stopPropagation());
+        
+        tourBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isTourMode = !isTourMode;
+            tourBtn.classList.toggle('active', isTourMode);
+            
+            // Reset speed tracking when starting tour
+            if (isTourMode) {
+                lastTourSpeed = TOUR_CRUISE_SPEED;
+            }
+            
+            // Auto-start playback if not already playing
+            if (isTourMode && !isPlaying) {
+                togglePlay();
+            }
+        });
+        
+        tourBtn.addEventListener('touchstart', (e) => e.stopPropagation());
+        
+        colorBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            colorByBirthOrder = !colorByBirthOrder;
+            colorBtn.classList.toggle('active', colorByBirthOrder);
+            draw(numPetals);
+        });
+        
+        colorBtn.addEventListener('touchstart', (e) => e.stopPropagation());
+        
+        pseudoToggle.addEventListener('change', (e) => {
+            pseudoMode = e.target.checked;
+            draw(numPetals);
+        });
+        
+        window.addEventListener('resize', resizeCanvas);
+        
+        // Particle hover detection
+        const tooltip = document.getElementById('particleTooltip');
+        const canvasContainer = document.querySelector('.canvas-container');
+        
+        canvasContainer.style.pointerEvents = 'auto';
+        
+        canvasContainer.addEventListener('mousemove', (e) => {
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = (e.clientX - rect.left) * (canvas.width / dpr / rect.width);
+            const mouseY = (e.clientY - rect.top) * (canvas.height / dpr / rect.height);
+            
+            let nearestParticle = null;
+            let nearestDist = Infinity;
+            
+            for (const p of currentParticles) {
+                const dx = p.x - mouseX;
+                const dy = p.y - mouseY;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                const particleSize = 2 + p.petalShape * 2;
+                
+                if (dist < particleSize * 1.5 && dist < nearestDist) {
+                    nearestDist = dist;
+                    nearestParticle = p;
+                }
+            }
+            
+            if (nearestParticle) {
+                tooltip.textContent = `ID: ${nearestParticle.i}`;
+                tooltip.style.left = (e.clientX + 15) + 'px';
+                tooltip.style.top = (e.clientY - 10) + 'px';
+                tooltip.classList.add('visible');
+            } else {
+                tooltip.classList.remove('visible');
+            }
+        });
+        
+        canvasContainer.addEventListener('mouseleave', () => {
+            tooltip.classList.remove('visible');
+        });
+        
+        // Initial setup
+        playBtn.classList.add('playing');
+        tourBtn.classList.add('active');
+        lastFrameTime = performance.now();
+        animationId = requestAnimationFrame(animate);
+        resizeCanvas();
+    </script>
+</body>
+</html>
