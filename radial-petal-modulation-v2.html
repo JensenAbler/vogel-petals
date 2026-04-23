@@ -454,11 +454,24 @@
     
     <script>
         // Constants
-        const PHI = (1 + Math.sqrt(5)) / 2;       // φ ≈ 1.618
-        const PHI_2 = PHI * PHI;                   // φ² ≈ 2.618
-        const PHI_3 = PHI * PHI * PHI;             // φ³ ≈ 4.236
-        const PHI_4 = PHI * PHI * PHI * PHI;       // φ⁴ ≈ 6.854
-        const PHI_5 = PHI * PHI * PHI * PHI * PHI; // φ⁵ ≈ 11.09
+
+        // A coherence basis: an algebraic number ψ whose lattice ℤ + ψ·ℤ
+        // generates the visible coherence structure. For the golden family,
+        // ψ = φ and the modulation period α² = φ². Powers of ψ decompose onto
+        // the lattice via Fibonacci coefficients — see VogelSpiral.lean's
+        // `goldenRatio_pow_eq_fib_decomposition` and `step_size_decomposition`.
+        const GOLDEN_BASIS = (() => {
+            const psi = (1 + Math.sqrt(5)) / 2;
+            return { psi, psiName: 'φ', alphaSq: psi * psi };
+        })();
+
+        // Legacy scalar aliases. Existing detection rules still read these;
+        // subsequent commits will route more sites through GOLDEN_BASIS.
+        const PHI = GOLDEN_BASIS.psi;              // φ ≈ 1.618
+        const PHI_2 = GOLDEN_BASIS.alphaSq;         // φ² ≈ 2.618
+        const PHI_3 = PHI * PHI_2;                  // φ³ ≈ 4.236
+        const PHI_4 = PHI_2 * PHI_2;                // φ⁴ ≈ 6.854
+        const PHI_5 = PHI * PHI_4;                  // φ⁵ ≈ 11.09
         const PI = Math.PI;
         
         const TOLERANCE = 0.012;
