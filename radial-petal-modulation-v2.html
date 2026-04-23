@@ -594,11 +594,88 @@
             return null;
         }
         
+        // matchGoldenRule: pattern-match the (a, b) from decompose(x, GOLDEN_BASIS)
+        // against the golden-family rules. Returns { distance, match } or null.
+        //
+        // Each legacy rule is a specific (a, b) pattern on the ℤ[φ] lattice:
+        //
+        //   Rule 2 (nφ → n petals):      (a=n, b=-n),   n ∈ [2, 6]
+        //     because P = nφ ⇒ step = n/φ = nφ - n.
+        //   Rule 3 (n/φ → 2n petals):    (a=2n, b=-3n), n ∈ [5, 15]
+        //     because P = n/φ ⇒ step = n/φ³ = 2nφ - 3n.
+        //   Rule 4 (nφ² → all-to-center):(a=0, b=n),    n ∈ [1, 4]
+        //     because P = nφ² ⇒ step = n (integer, vanishes under sin⁸).
+        //   Rule 5 (φⁿ → half-disc):     (a=Fib(n-2), b=Fib(n-3)), n ∈ {3,4,5}
+        //     which is `step_size_decomposition` from VogelSpiral.lean.
+        //   Rule 5b (conch near φⁿ):     same (a, b) as Rule 5, mid residual.
+        //
+        // The residual from decompose is in step-space; residualP = residual · α²
+        // is the x-space distance, equivalent to the old |x - center| checks.
+        function matchGoldenRule(P, decomp, basis) {
+            const { a, b, residual } = decomp;
+            const residualP = residual * basis.alphaSq;
+
+            // Rule 4: (0, n) for n ∈ [1, 4]
+            if (a === 0 && b >= 1 && b <= 4 && residualP < TIGHT_TOLERANCE) {
+                return {
+                    distance: residualP,
+                    match: { type: 'all-to-center', label: 'All-to-center', formula: `${b}φ²` }
+                };
+            }
+
+            // Rule 5 / 5b: (Fib(n-2), Fib(n-3)) for P = φⁿ, n ∈ {3, 4, 5}.
+            const phiPowerByAB = { '1,0': 3, '1,1': 4, '2,1': 5 };
+            const phiLabels = { 3: 'φ³', 4: 'φ⁴', 5: 'φ⁵' };
+            const phiPower = phiPowerByAB[`${a},${b}`];
+
+            if (phiPower !== undefined && residualP < TIGHT_TOLERANCE) {
+                return {
+                    distance: residualP,
+                    match: { type: 'half-disc', label: 'Half-disc', formula: phiLabels[phiPower] }
+                };
+            }
+
+            if ((phiPower === 3 || phiPower === 4)
+                    && residualP >= TIGHT_TOLERANCE && residualP < TOLERANCE) {
+                const pVal = phiPower === 3 ? PHI_3 : PHI_4;
+                const side = P < pVal ? 'point-cloud' : 'spiral';
+                return {
+                    distance: residualP,
+                    match: {
+                        type: 'conch',
+                        label: `Conch (${side})`,
+                        formula: `${phiLabels[phiPower]} ${P < pVal ? '-' : '+'} ${residualP.toFixed(4)}`
+                    }
+                };
+            }
+
+            // Rule 2: (n, -n) for n ∈ [2, 6]
+            if (a >= 2 && a <= 6 && b === -a && residualP < TOLERANCE) {
+                return {
+                    distance: residualP,
+                    match: { type: 'petals', label: `${a} petals`, formula: `${a}φ` }
+                };
+            }
+
+            // Rule 3: (2n, -3n) for n ∈ [5, 15]
+            if (a % 2 === 0 && a / 2 >= 5 && a / 2 <= 15 && b === -3 * a / 2
+                    && residualP < TOLERANCE) {
+                return {
+                    distance: residualP,
+                    match: { type: 'petals', label: `${a} petals`, formula: `${a / 2}/φ` }
+                };
+            }
+
+            return null;
+        }
+
         function detectCoherence(x) {
             let bestMatch = null;
             let bestDistance = Infinity;
-            
-            // Rule 1: numPetals = n (integer) → n petals
+
+            // Rule 1: numPetals = n (integer) → n petals. Not unified into
+            // decompose() because its mechanism is the direct modulation
+            // period matching integer-fold symmetry, not the ℤ[φ] lattice.
             const nearestInt = Math.round(x);
             const intDistance = Math.abs(x - nearestInt);
             if (intDistance < TOLERANCE && nearestInt >= 3 && nearestInt <= 9) {
@@ -611,73 +688,14 @@
                     };
                 }
             }
-            
-            // Rule 2: numPetals = nφ → n petals
-            const nPhi = x / PHI;
-            const nearestNPhi = Math.round(nPhi);
-            const nPhiDistance = Math.abs(x - nearestNPhi * PHI);
-            if (nPhiDistance < TOLERANCE && nearestNPhi >= 2 && nearestNPhi <= 6) {
-                if (nPhiDistance < bestDistance) {
-                    bestDistance = nPhiDistance;
-                    bestMatch = {
-                        type: 'petals',
-                        label: `${nearestNPhi} petals`,
-                        formula: `${nearestNPhi}φ`
-                    };
-                }
+
+            // Rules 2, 3, 4, 5, 5b — unified via the single ℤ[φ] decomposition.
+            const goldenResult = matchGoldenRule(x, decompose(x, GOLDEN_BASIS), GOLDEN_BASIS);
+            if (goldenResult && goldenResult.distance < bestDistance) {
+                bestDistance = goldenResult.distance;
+                bestMatch = goldenResult.match;
             }
-            
-            // Rule 3: numPetals = n/φ → 2n petals
-            const nOverPhi = x * PHI;
-            const nearestNOverPhi = Math.round(nOverPhi);
-            const nOverPhiDistance = Math.abs(x - nearestNOverPhi / PHI);
-            if (nOverPhiDistance < TOLERANCE && nearestNOverPhi >= 5 && nearestNOverPhi <= 15) {
-                if (nOverPhiDistance < bestDistance) {
-                    bestDistance = nOverPhiDistance;
-                    bestMatch = {
-                        type: 'petals',
-                        label: `${nearestNOverPhi * 2} petals`,
-                        formula: `${nearestNOverPhi}/φ`
-                    };
-                }
-            }
-            
-            // Rule 4: numPetals = nφ² → all-to-center
-            const nPhi2 = x / PHI_2;
-            const nearestNPhi2 = Math.round(nPhi2);
-            const nPhi2Distance = Math.abs(x - nearestNPhi2 * PHI_2);
-            if (nPhi2Distance < TIGHT_TOLERANCE && nearestNPhi2 >= 1 && nearestNPhi2 <= 4) {
-                if (nPhi2Distance < bestDistance) {
-                    bestDistance = nPhi2Distance;
-                    bestMatch = {
-                        type: 'all-to-center',
-                        label: 'All-to-center',
-                        formula: `${nearestNPhi2}φ²`
-                    };
-                }
-            }
-            
-            // Rule 5: numPetals = φⁿ⁺² (φ³, φ⁴, φ⁵...) → half-disc
-            const phiPowers = [
-                { power: 3, value: PHI_3, label: 'φ³' },
-                { power: 4, value: PHI_4, label: 'φ⁴' },
-                { power: 5, value: PHI_5, label: 'φ⁵' }
-            ];
-            
-            for (const pp of phiPowers) {
-                const ppDistance = Math.abs(x - pp.value);
-                if (ppDistance < TIGHT_TOLERANCE) {
-                    if (ppDistance < bestDistance) {
-                        bestDistance = ppDistance;
-                        bestMatch = {
-                            type: 'half-disc',
-                            label: 'Half-disc',
-                            formula: pp.label
-                        };
-                    }
-                }
-            }
-            
+
             // Rule 7: numPetals = (n/2)φ² + 0.5 → half-disc (n = 1, 2, 3, 4, 5, 6...)
             // This means multiples of 0.5φ²: 0.5φ², 1φ², 1.5φ², 2φ², 2.5φ², 3φ²... all shifted by +0.5
             const halfPhi2 = PHI_2 / 2;  // 0.5φ² ≈ 1.309
@@ -719,34 +737,6 @@
                             formula: `${nVal}½φ²`
                         };
                     }
-                }
-            }
-            
-            // Rule 5b: Conch shells very close to φ³ or φ⁴
-            const phi3Distance = Math.abs(x - PHI_3);
-            const phi4Distance = Math.abs(x - PHI_4);
-            
-            if (phi3Distance < TOLERANCE && phi3Distance >= TIGHT_TOLERANCE) {
-                const side = x < PHI_3 ? 'point-cloud' : 'spiral';
-                if (phi3Distance < bestDistance) {
-                    bestDistance = phi3Distance;
-                    bestMatch = {
-                        type: 'conch',
-                        label: `Conch (${side})`,
-                        formula: `φ³ ${x < PHI_3 ? '-' : '+'} ${phi3Distance.toFixed(4)}`
-                    };
-                }
-            }
-            
-            if (phi4Distance < TOLERANCE && phi4Distance >= TIGHT_TOLERANCE) {
-                const side = x < PHI_4 ? 'point-cloud' : 'spiral';
-                if (phi4Distance < bestDistance) {
-                    bestDistance = phi4Distance;
-                    bestMatch = {
-                        type: 'conch',
-                        label: `Conch (${side})`,
-                        formula: `φ⁴ ${x < PHI_4 ? '-' : '+'} ${phi4Distance.toFixed(4)}`
-                    };
                 }
             }
             
