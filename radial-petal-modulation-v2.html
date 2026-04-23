@@ -827,10 +827,14 @@
             const piQuarter = PI / 4;
             const halfPhi2 = PHI_2 / 2;
             const exactPetal  = findNearestPetalLattice(P);
-            const phi2Dist    = Math.abs(P - Math.round(P / PHI_2) * PHI_2);
-            const piDist      = Math.abs(P - Math.round(P / piQuarter) * piQuarter);
+            const nearestStepInteger = Math.round(P / PHI_2);
+            const nearestPiN   = Math.round(P / piQuarter);
+            const nearestNHalfPhi2 = Math.round((P - 0.5) / halfPhi2);
+            const nearestHalfInt = Math.round(P / PHI_2 - 0.5) + 0.5;
+            const phi2Dist    = Math.abs(P - nearestStepInteger * PHI_2);
+            const piDist      = Math.abs(P - nearestPiN * piQuarter);
             const halfDiscDist = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
-            const r8Dist      = Math.abs(P - (Math.round(P / PHI_2 - 0.5) + 0.5) * PHI_2);
+            const r8Dist      = Math.abs(P - nearestHalfInt * PHI_2);
             const dyadicDist  = findNearestPetalLattice(P, {
                 scale: 2,
                 maxPetals: PSEUDO_PETAL_MAX,
@@ -844,15 +848,21 @@
 
             const exactNormalizedDist = Math.min(
                 exactPetal.distanceP / TIGHT_TOLERANCE + exactPetalBias(exactPetal.count),
-                phi2Dist       / ALL_TO_CENTER_TOLERANCE,
-                piDist         / TOLERANCE,
-                r8Dist         / TIGHT_TOLERANCE,
+                Math.abs(nearestStepInteger) >= 1
+                    ? phi2Dist / ALL_TO_CENTER_TOLERANCE
+                    : Infinity,
+                Math.abs(nearestPiN) >= 4
+                    ? piDist / TOLERANCE
+                    : Infinity,
+                Math.abs(nearestHalfInt) >= 1.5
+                    ? r8Dist / TIGHT_TOLERANCE
+                    : Infinity,
             );
 
             const exactStrength = Math.exp(-exactNormalizedDist);
-            const halfDiscStrength = pseudoStrengthFromNormalized(
-                halfDiscDist / TIGHT_TOLERANCE
-            );
+            const halfDiscStrength = Math.abs(nearestNHalfPhi2) >= 2
+                ? pseudoStrengthFromNormalized(halfDiscDist / TIGHT_TOLERANCE)
+                : 0;
             const dyadicStrength = pseudoStrengthFromNormalized(
                 dyadicDist / PSEUDO_SHOULDER_TOLERANCE
             );
