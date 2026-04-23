@@ -469,210 +469,145 @@
         // subsequent commits will route more sites through GOLDEN_BASIS.
         const PHI = GOLDEN_BASIS.psi;              // φ ≈ 1.618
         const PHI_2 = GOLDEN_BASIS.alphaSq;         // φ² ≈ 2.618
-        const PHI_3 = PHI * PHI_2;                  // φ³ ≈ 4.236
-        const PHI_4 = PHI_2 * PHI_2;                // φ⁴ ≈ 6.854
-        const PHI_5 = PHI * PHI_4;                  // φ⁵ ≈ 11.09
         const PI = Math.PI;
-
-        // Discrete φⁿ coherences (Rule 5 half-disc centers). Unlike the other
-        // rules whose nearest-member is computed modulo a lattice spacing,
-        // φⁿ values are geometrically growing and isolated — the tour queries
-        // them against this fixed list. Both signs included so negative P is
-        // handled symmetrically (sin⁸ is even, so -φⁿ produces the same
-        // modulation pattern as +φⁿ).
-        const PHI_POWERS = (() => {
-            const arr = [];
-            let v = PHI_3;
-            for (let i = 0; i < 18; i++) {
-                arr.push(v, -v);
-                v *= PHI;
-            }
-            return arr;
-        })();
         
         const TOLERANCE = 0.012;
         const TIGHT_TOLERANCE = 0.005;
-        const PSEUDO_TOLERANCE = 0.003;
+        const GENERAL_PETAL_MAX = 40;
+        const PSEUDO_PETAL_MAX = 20;
+        const QUARTER_PSEUDO_MAX = 4;
+        const PSEUDO_CORE_TOLERANCE = 0.0009;
+        const PSEUDO_SHOULDER_TOLERANCE = 0.0045;
+        const PSEUDO_DIFFUSE_TOLERANCE = 0.0035;
 
-        // decompose(P, basis): express P/basis.alphaSq as a·ψ + b for the
-        // integer (a, b) minimizing the residual |P/alphaSq - a·ψ - b|.
+        // Empirical exceptions that survive φ² offset shifts but are not yet
+        // explained by the clean dyadic lattice rule. We keep them explicit so
+        // the pseudo predictor is honest about what is theory-driven vs tuned.
+        const EMPIRICAL_PSEUDO_FAMILIES = [
+            {
+                residue: ((3.2849 % PHI_2) + PHI_2) % PHI_2,
+                count: 2,
+                coreTolerance: 0.0009,
+                shoulderTolerance: 0.0045,
+            },
+            {
+                residue: ((3.4120 % PHI_2) + PHI_2) % PHI_2,
+                count: 5,
+                coreTolerance: 0.0009,
+                shoulderTolerance: 0.0045,
+            },
+        ];
+
+        function distToNearestInteger(x) {
+            return Math.abs(x - Math.round(x));
+        }
+
+        function mod(x, period) {
+            return ((x % period) + period) % period;
+        }
+
+        function circularDistance(a, b, period) {
+            const delta = Math.abs(a - b);
+            return Math.min(delta, period - delta);
+        }
+
+        function formatPetalLabel(count, prefix = '') {
+            const noun = count === 1 ? 'petal' : 'petals';
+            return prefix ? `${prefix} ${count} ${noun}` : `${count} ${noun}`;
+        }
+
+        function formatSignedPhi(count, sign) {
+            return `${sign < 0 ? '-' : ''}${count}φ`;
+        }
+
+        function formatLatticeFormula(scale, count, sign, integerShift, approximate = false) {
+            const lhs = scale === 1 ? 'P/φ²' : `${scale}P/φ²`;
+            const relation = approximate ? '≈' : '=';
+            let rhs = formatSignedPhi(count, sign);
+            if (integerShift !== 0) {
+                rhs += ` ${integerShift > 0 ? '+' : '-'} ${Math.abs(integerShift)}`;
+            }
+            return `${lhs} ${relation} ${rhs}`;
+        }
+
+        // General petal lattice:
+        //   exact petals   ↔  P/φ² ≈ ±nφ (mod 1)
+        //   dyadic pseudo  ↔  2P/φ² ≈ ±nφ (mod 1)
+        //   quarter echo   ↔  4P/φ² ≈ ±nφ (mod 1)
         //
-        // Theoretical basis (VogelSpiral.lean):
-        //   - `step_size_decomposition` proves P/αSq decomposes onto the
-        //     ℤ[ψ] lattice for P ∈ ℤ[ψ]; |a| equals the petal count.
-        //   - `offset_invariance` proves the integer b is invisible under
-        //     sin⁸ modulation (shifting P by αSq shifts step by an integer).
-        //
-        // The returned `residual` is the step-space distance to the nearest
-        // lattice point; multiply by basis.alphaSq to get distance in P.
-        //
-        // aRange bounds |a|; the default 100 covers |a| = Fib(11) = 89 so
-        // φⁿ coherences are recognized up through n = 13 (P ≈ 521), well
-        // past the visually distinguishable range on 1000 particles.
-        function decompose(P, basis, { aRange = 100 } = {}) {
-            const step = P / basis.alphaSq;
-            const b0 = Math.round(step);
-            let best = { a: 0, b: b0, residual: Math.abs(step - b0) };
-            for (let a = -aRange; a <= aRange; a++) {
-                const diff = step - a * basis.psi;
-                const b = Math.round(diff);
-                const residual = Math.abs(diff - b);
-                if (residual < best.residual) {
-                    best = { a, b, residual };
+        // Integer shifts in step-space are invisible under the modulation,
+        // which is why the detector works modulo 1 and automatically bakes in
+        // the P -> P + φ² offset invariance.
+        function findNearestPetalLattice(P, { scale = 1, maxPetals = GENERAL_PETAL_MAX } = {}) {
+            const step = (scale * P) / PHI_2;
+            let best = null;
+
+            for (let count = 1; count <= maxPetals; count++) {
+                for (const sign of [-1, 1]) {
+                    const integerShift = Math.round(step - sign * count * PHI);
+                    const latticeStep = sign * count * PHI + integerShift;
+                    const distanceP = Math.abs(step - latticeStep) * PHI_2 / scale;
+
+                    if (!best || distanceP < best.distanceP) {
+                        best = {
+                            count,
+                            sign,
+                            integerShift,
+                            distanceP,
+                            formula: formatLatticeFormula(scale, count, sign, integerShift, scale !== 1),
+                        };
+                    }
                 }
             }
+
             return best;
         }
 
-        // Pseudo-coherence band: the range of step-to-lattice residuals that
-        // count as "near-miss" for a primary coherence. A P value in this band
-        // sits close to (but not on) an integer-family lattice point; the
-        // visible spiral has structure but lacks the crisp snap of a primary.
-        //
-        // Upper bound 0.09 approximates what the old hand-picked LADDER_*
-        // arrays covered (their max residualP ≈ 0.088 at n=3, k=55).
-        const PSEUDO_BAND_MAX = 0.09;
+        function findNearestEmpiricalPseudo(P) {
+            const residue = mod(P, PHI_2);
+            let best = null;
 
-        // Fibonacci numbers used to enumerate canonical pseudo centers for the
-        // tour. These are the continued-fraction convergents' denominators for
-        // φ and give the tightest rational approximations: residuals at these
-        // points fall in decreasing geometric sequence, which is the same
-        // structure the old LADDER_* arrays encoded empirically.
-        const PSEUDO_FIBS = [55, 89, 144, 233, 377, 610, 987, 1597];
+            for (const family of EMPIRICAL_PSEUDO_FAMILIES) {
+                const distanceP = circularDistance(residue, family.residue, PHI_2);
+                if (!best || distanceP < best.distanceP) {
+                    best = {
+                        ...family,
+                        distanceP,
+                        formula: `P ≡ ${family.residue.toFixed(6)} (mod φ²)`,
+                    };
+                }
+            }
 
-        // detectPseudoCoherence: a near-miss against an integer-base primary.
-        // Unified with the primary detector by reading the same decompose()
-        // output. Integer P = m corresponds to (a, b) = (-m, 2m) for positive m
-        // and (m, -2m) for negative m on the ℤ[φ] lattice; a pseudo is the
-        // same pattern with a residual in PSEUDO_BAND. Works for any |m| ≥ 3.
+            return best;
+        }
+
         function detectPseudoCoherence(P) {
-            const { a, b, residual } = decompose(P, GOLDEN_BASIS);
-            const residualP = residual * GOLDEN_BASIS.alphaSq;
-
-            // b + 2a == 0 matches the integer-base pattern symmetrically for
-            // positive and negative integer bases — the sign of a flips but
-            // b = -2a holds either way.
-            const n = Math.abs(a);
-            if (n < 3 || b !== -2 * a) return null;
-            if (residualP < TIGHT_TOLERANCE || residualP >= PSEUDO_BAND_MAX) return null;
-
-            // Recover the implied denominator k from residualP ≈ φ·n/k. Old
-            // ladders keyed their sub-labels to specific k; reporting k keeps
-            // that information even though the ladders are gone.
-            const kImplied = Math.round(PHI * n / residualP);
-            const baseInt = Math.round(P);
-            const offsetSign = P >= baseInt ? '+' : '-';
-            return {
-                type: 'pseudo',
-                label: `Pseudo ${n} petals`,
-                formula: `${baseInt} ${offsetSign} φ·${n}/${kImplied}`
-            };
-        }
-
-
-        // fibPowerFromPair(a, b): if (a, b) = (Fib(n), Fib(n-1)) for some
-        // n ≥ 1, return n + 2 (the φ power such that P = φⁿ⁺² decomposes to
-        // this pair via step_size_decomposition). Otherwise null. Walks the
-        // Fibonacci recurrence rather than a fixed lookup so any power is
-        // recognized — the tour no longer caps at {φ³, φ⁴, φ⁵}.
-        function fibPowerFromPair(a, b) {
-            if (a < 1 || b < 0 || b > a) return null;
-            let f1 = 1, f0 = 0;
-            for (let n = 1; n <= 30; n++) {
-                if (f1 === a && f0 === b) return n + 2;
-                [f1, f0] = [f1 + f0, f1];
-            }
-            return null;
-        }
-
-        // matchGoldenRule: pattern-match the (a, b) from decompose(x, GOLDEN_BASIS)
-        // against the golden-family rules. Returns { distance, match } or null.
-        //
-        // Each rule is a specific (a, b) pattern on the ℤ[φ] lattice, using
-        // magnitudes so that positive and negative P are handled symmetrically
-        // (sin⁸ is even; see comment inside):
-        //
-        //   Rule 2 (nφ → |n| petals):     b = -a, |n| ≥ 2
-        //     because P = nφ ⇒ step = n/φ = nφ - n.
-        //   Rule 3 (n/φ → |2n| petals):   2b = -3a, |n| ≥ 2
-        //     because P = n/φ ⇒ step = n/φ³ = 2nφ - 3n.
-        //   Rule 4 (nφ² → all-to-center): a = 0, |n| ≥ 1
-        //     because P = nφ² ⇒ step = n (integer, vanishes under sin⁸).
-        //   Rule 5 (φⁿ → half-disc):      (|a|, |b|) = (Fib(n), Fib(n-1))
-        //     which is `step_size_decomposition` from VogelSpiral.lean.
-        //   Rule 5b (conch near φⁿ):      same pattern as Rule 5, mid residual,
-        //     only for φ³ and φ⁴ where the point-cloud vs. spiral sides differ.
-        //
-        // The residual from decompose is in step-space; residualP = residual · α²
-        // is the x-space distance, equivalent to the old |x - center| checks.
-        function matchGoldenRule(P, decomp, basis) {
-            const { a, b, residual } = decomp;
-            const residualP = residual * basis.alphaSq;
-
-            // Sign-agnostic view: the modulation sin⁸ is even, so (a, b) and
-            // (-a, -b) describe the same visual (P and -P produce the same
-            // petal pattern). Label using magnitudes; sign of P is reflected
-            // in the formula via the sign of the leading coefficient.
-            const absA = Math.abs(a);
-            const absB = Math.abs(b);
-            const sign = a < 0 || (a === 0 && b < 0) ? -1 : 1;
-            const sgn = (k) => sign < 0 ? `-${k}` : `${k}`;
-
-            // Rule 4: (0, n) → nφ² "all-to-center". Any |n| ≥ 1.
-            if (a === 0 && absB >= 1 && residualP < TIGHT_TOLERANCE) {
+            const empirical = findNearestEmpiricalPseudo(P);
+            if (empirical && empirical.distanceP < empirical.shoulderTolerance) {
+                const isCore = empirical.distanceP < empirical.coreTolerance;
                 return {
-                    distance: residualP,
-                    match: { type: 'all-to-center', label: 'All-to-center', formula: `${sgn(absB)}φ²` }
+                    type: 'pseudo',
+                    label: formatPetalLabel(empirical.count, isCore ? 'Pseudo' : 'Twisted pseudo'),
+                    formula: empirical.formula,
                 };
             }
 
-            // Rule 5 / 5b: (Fib(n), Fib(n-1)) for P = ±φⁿ⁺², any n ≥ 1.
-            // Derives the φ power on the fly instead of looking up a fixed map.
-            const phiPower = fibPowerFromPair(absA, absB);
-            const phiLabel = (p) => {
-                const supers = { 0:'⁰',1:'¹',2:'²',3:'³',4:'⁴',5:'⁵',6:'⁶',7:'⁷',8:'⁸',9:'⁹' };
-                const s = String(p).split('').map(c => supers[c] || c).join('');
-                return `${sign < 0 ? '-' : ''}φ${s}`;
-            };
-
-            if (phiPower !== null && residualP < TIGHT_TOLERANCE) {
+            const dyadic = findNearestPetalLattice(P, { scale: 2, maxPetals: PSEUDO_PETAL_MAX });
+            if (dyadic && dyadic.distanceP < PSEUDO_SHOULDER_TOLERANCE) {
+                const isCore = dyadic.distanceP < PSEUDO_CORE_TOLERANCE;
                 return {
-                    distance: residualP,
-                    match: { type: 'half-disc', label: 'Half-disc', formula: phiLabel(phiPower) }
+                    type: 'pseudo',
+                    label: formatPetalLabel(dyadic.count, isCore ? 'Pseudo' : 'Twisted pseudo'),
+                    formula: dyadic.formula,
                 };
             }
 
-            // Rule 5b: conch-band residual. Kept specific to φ³ and φ⁴ because
-            // the point-cloud vs. spiral sides are only visually distinct at
-            // those low powers; higher φⁿ just look like a sharper half-disc.
-            if ((phiPower === 3 || phiPower === 4)
-                    && residualP >= TIGHT_TOLERANCE && residualP < TOLERANCE) {
-                const pVal = (phiPower === 3 ? PHI_3 : PHI_4) * sign;
-                const side = P < pVal ? 'point-cloud' : 'spiral';
+            const quarter = findNearestPetalLattice(P, { scale: 4, maxPetals: QUARTER_PSEUDO_MAX });
+            if (quarter && quarter.distanceP < PSEUDO_DIFFUSE_TOLERANCE) {
                 return {
-                    distance: residualP,
-                    match: {
-                        type: 'conch',
-                        label: `Conch (${side})`,
-                        formula: `${phiLabel(phiPower)} ${P < pVal ? '-' : '+'} ${residualP.toFixed(4)}`
-                    }
-                };
-            }
-
-            // Rule 2: (n, -n) → nφ, |n| petals. Any |n| ≥ 2.
-            if (b === -a && absA >= 2 && residualP < TOLERANCE) {
-                return {
-                    distance: residualP,
-                    match: { type: 'petals', label: `${absA} petals`, formula: `${sgn(absA)}φ` }
-                };
-            }
-
-            // Rule 3: (2n, -3n) → n/φ, |2n| petals. Any |n| ≥ 2 (|a| ≥ 4).
-            if (a % 2 === 0 && b === -3 * a / 2 && absA / 2 >= 2
-                    && residualP < TOLERANCE) {
-                return {
-                    distance: residualP,
-                    match: { type: 'petals', label: `${absA} petals`, formula: `${sgn(absA / 2)}/φ` }
+                    type: 'pseudo',
+                    label: formatPetalLabel(quarter.count, 'Diffuse pseudo'),
+                    formula: quarter.formula,
                 };
             }
 
@@ -683,27 +618,32 @@
             let bestMatch = null;
             let bestDistance = Infinity;
 
-            // Rule 1: numPetals = n (integer) → |n| petals. Not unified into
-            // decompose() because its mechanism is the direct modulation
-            // period matching integer-fold symmetry, not the ℤ[φ] lattice.
-            const nearestInt = Math.round(x);
-            const intDistance = Math.abs(x - nearestInt);
-            if (intDistance < TOLERANCE && Math.abs(nearestInt) >= 3) {
-                if (intDistance < bestDistance) {
-                    bestDistance = intDistance;
+            // Exact all-to-center coherences are the integer points in step-space.
+            const step = x / PHI_2;
+            const nearestStepInteger = Math.round(step);
+            const phi2Distance = Math.abs(step - nearestStepInteger) * PHI_2;
+            if (phi2Distance < TIGHT_TOLERANCE && Math.abs(nearestStepInteger) >= 1) {
+                if (phi2Distance < bestDistance) {
+                    bestDistance = phi2Distance;
                     bestMatch = {
-                        type: 'petals',
-                        label: `${Math.abs(nearestInt)} petals`,
-                        formula: `${nearestInt}`
+                        type: 'all-to-center',
+                        label: 'All-to-center',
+                        formula: `${nearestStepInteger}φ²`
                     };
                 }
             }
 
-            // Rules 2, 3, 4, 5, 5b — unified via the single ℤ[φ] decomposition.
-            const goldenResult = matchGoldenRule(x, decompose(x, GOLDEN_BASIS), GOLDEN_BASIS);
-            if (goldenResult && goldenResult.distance < bestDistance) {
-                bestDistance = goldenResult.distance;
-                bestMatch = goldenResult.match;
+            // General exact petal lattice.
+            const latticePetal = findNearestPetalLattice(x);
+            if (latticePetal && latticePetal.distanceP < TIGHT_TOLERANCE) {
+                if (latticePetal.distanceP < bestDistance) {
+                    bestDistance = latticePetal.distanceP;
+                    bestMatch = {
+                        type: 'petals',
+                        label: formatPetalLabel(latticePetal.count),
+                        formula: latticePetal.formula
+                    };
+                }
             }
 
             // Rule 7: numPetals = (n/2)φ² + 0.5 → half-disc, any |n| ≥ 2.
@@ -820,76 +760,50 @@
         const MAX_SPEED_INCREASE_RATE = 2.0; // Can double speed per frame until cruise
         let lastTourSpeed = TOUR_CRUISE_SPEED;
         
-        // coherenceStrength(P): normalized distance from P to the nearest
-        // member of any coherence family, mapped through exp(-·) to [0, 1].
-        // Replaces the old enumerate-all-centers approach — each family has
-        // a closed-form "nearest member" via modular arithmetic (round-to-
-        // nearest in the appropriate basis), so the query is O(1) regardless
-        // of how large |P| gets. This is what makes the tour work for any P,
-        // positive or negative, with no upper bound on petal count.
-        //
-        // Each rule uses round-to-nearest in its natural basis:
-        //   Rule 1 (integer P):    round(P)
-        //   Rule 2 (nφ):           round(P/φ)·φ
-        //   Rule 3 (n/φ):          round(P·φ)/φ
-        //   Rule 4 (nφ²):          round(P/φ²)·φ²
-        //   Rule 5 (φⁿ):           discrete list PHI_POWERS
-        //   Rule 6 (nπ/4):         round(P/(π/4))·(π/4)
-        //   Rule 7 (n·½φ² + ½):    round((P-0.5)/(φ²/2))·(φ²/2) + 0.5
-        //   Rule 8 ((n+½)φ²):      (round(P/φ² - 0.5) + 0.5)·φ²
-        // Tolerance per rule preserves the old radii (TOLERANCE for loose
-        // modulation families, TIGHT_TOLERANCE for the ones requiring sharper
-        // alignment). The min over normalized distances + exp falloff gives
-        // strength ≈ 1 at a center and ≈ 0 between centers.
+        // coherenceStrength(P): map distance-to-family into [0, 1] for the
+        // automatic tour. Exact mode now uses the general petal lattice plus
+        // the spiral / all-to-center families. Pseudo mode uses the dyadic
+        // and quarter echoes of that lattice, then folds in the two currently
+        // empirical residue classes we still cannot derive cleanly.
         function coherenceStrength(P) {
             const piQuarter = PI / 4;
             const halfPhi2 = PHI_2 / 2;
 
             if (!pseudoMode) {
-                const intDist     = Math.abs(P - Math.round(P));
-                const phiDist     = Math.abs(P - Math.round(P / PHI) * PHI);
-                const invPhiDist  = Math.abs(P - Math.round(P * PHI) / PHI);
+                const petalDist   = findNearestPetalLattice(P).distanceP;
                 const phi2Dist    = Math.abs(P - Math.round(P / PHI_2) * PHI_2);
                 const piDist      = Math.abs(P - Math.round(P / piQuarter) * piQuarter);
                 const r7Dist      = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
                 const r8Dist      = Math.abs(P - (Math.round(P / PHI_2 - 0.5) + 0.5) * PHI_2);
 
-                let phiPowDist = Infinity;
-                for (const pp of PHI_POWERS) {
-                    const d = Math.abs(P - pp);
-                    if (d < phiPowDist) phiPowDist = d;
-                }
-
                 const minNormalizedDist = Math.min(
-                    intDist     / TOLERANCE,
-                    phiDist     / TOLERANCE,
-                    invPhiDist  / TOLERANCE,
+                    petalDist   / TIGHT_TOLERANCE,
                     phi2Dist    / TIGHT_TOLERANCE,
                     piDist      / TOLERANCE,
                     r7Dist      / TIGHT_TOLERANCE,
                     r8Dist      / TIGHT_TOLERANCE,
-                    phiPowDist  / TIGHT_TOLERANCE,
                 );
                 return Math.exp(-minNormalizedDist);
             } else {
-                // Pseudo: near-miss to integer P, peaked at residuals of the
-                // form φ·n/fm for Fibonacci fm (continued-fraction convergents
-                // of φ). Same shape as before but computed directly from the
-                // nearest-integer query, so any |n| works.
-                const nearestInt = Math.round(P);
-                const offset = Math.abs(P - nearestInt);
-                const n = Math.abs(nearestInt);
-                if (n < 3) return 0;
-                if (offset < TIGHT_TOLERANCE || offset >= PSEUDO_BAND_MAX) return 0;
+                const dyadicDist = findNearestPetalLattice(P, {
+                    scale: 2,
+                    maxPetals: PSEUDO_PETAL_MAX,
+                }).distanceP;
+                const quarter = findNearestPetalLattice(P, {
+                    scale: 4,
+                    maxPetals: QUARTER_PSEUDO_MAX,
+                });
+                const quarterDist = quarter ? quarter.distanceP : Infinity;
+                const empirical = findNearestEmpiricalPseudo(P);
+                const empiricalDist = empirical ? empirical.distanceP : Infinity;
 
-                let minFibDist = Infinity;
-                for (const fm of PSEUDO_FIBS) {
-                    const target = PHI * n / fm;
-                    if (target < TIGHT_TOLERANCE || target >= PSEUDO_BAND_MAX) continue;
-                    const d = Math.abs(offset - target);
-                    if (d < minFibDist) minFibDist = d;
-                }
-                return isFinite(minFibDist) ? Math.exp(-minFibDist / PSEUDO_TOLERANCE) : 0;
+                const minNormalizedDist = Math.min(
+                    dyadicDist / PSEUDO_SHOULDER_TOLERANCE,
+                    quarterDist / PSEUDO_DIFFUSE_TOLERANCE,
+                    empiricalDist / (empirical ? empirical.shoulderTolerance : 1),
+                );
+
+                return Math.exp(-minNormalizedDist);
             }
         }
         
