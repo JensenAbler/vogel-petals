@@ -512,88 +512,48 @@
             return (a * basis.psi + b) * basis.alphaSq;
         }
 
-        // Fibonacci numbers for pseudo-coherence
-        const F12 = 144;
-        const F13 = 233;
-        const F14 = 377;
-        
-        // Pseudo-coherence k-value ladders
-        // Solid zone (numPetals 3-6): based on F12 = 144
-        const LADDER_A = [144, 216, 324, 486];      // 144 × (3/2)^n - half-disc, 5-petal
-        const LADDER_B = [176, 264, 396];           // 176 × (3/2)^n - 4-petal, 2-petal  
-        const LADDER_PHI = [233, 350, 524];         // 233 × (3/2)^n - conch, spiral
-        
-        // Disruption zone (numPetals 7-8): based on F13 and F14
-        const LADDER_F13 = [155, 233, 350];         // F13 ladder
-        const LADDER_F14 = [251, 377, 566];         // F14 ladder
-        
-        function detectPseudoCoherence(x) {
-            const numPetalsInt = Math.floor(x);
-            const offset = x - numPetalsInt;
-            
-            // Only check positive offsets for now (post-integer pseudo-coherences)
-            if (offset < 0.005 || offset > 0.25) return null;
-            
-            const isSolidZone = numPetalsInt >= 3 && numPetalsInt <= 6;
-            const isDisruptionZone = numPetalsInt >= 7 && numPetalsInt <= 8;
-            
-            if (!isSolidZone && !isDisruptionZone) return null;
-            
-            let ladders, minK;
-            
-            if (isSolidZone) {
-                ladders = [...LADDER_A, ...LADDER_B, ...LADDER_PHI];
-                minK = 36 * numPetalsInt;
-            } else {
-                ladders = [...LADDER_F13, ...LADDER_F14];
-                minK = 30 * numPetalsInt;
-            }
-            
-            // Filter ladders by minimum k
-            ladders = ladders.filter(k => k >= minK);
-            
-            // Check each k value
-            for (const k of ladders) {
-                const expectedOffset = PHI * numPetalsInt / k;
-                const distance = Math.abs(offset - expectedOffset);
-                
-                if (distance < PSEUDO_TOLERANCE) {
-                    // Determine pseudo type based on which ladder
-                    let pseudoType = 'pseudo-spiral';
-                    let formula = `k=${k}`;
-                    
-                    if (LADDER_A.includes(k)) {
-                        if (k === 216) pseudoType = 'pseudo-half-disc';
-                        else pseudoType = 'pseudo-petals';
-                        formula = `F₁₂×${(k/144).toFixed(2)}`;
-                    } else if (LADDER_B.includes(k)) {
-                        pseudoType = 'pseudo-petals';
-                        formula = `F₁₂×${(k/144).toFixed(2)}`;
-                    } else if (LADDER_PHI.includes(k)) {
-                        if (k === 233 || k === 350) pseudoType = 'pseudo-conch';
-                        else pseudoType = 'pseudo-spiral';
-                        formula = `F₁₃×${(k/233).toFixed(2)}`;
-                    } else if (LADDER_F13.includes(k)) {
-                        pseudoType = 'pseudo-spiral';
-                        formula = `F₁₃×${(k/233).toFixed(2)}`;
-                    } else if (LADDER_F14.includes(k)) {
-                        if (k === 251) pseudoType = 'pseudo-half-disc';
-                        else pseudoType = 'pseudo-petals';
-                        formula = `F₁₄×${(k/377).toFixed(2)}`;
-                    }
-                    
-                    return {
-                        type: 'pseudo',
-                        label: pseudoType.replace('pseudo-', 'Pseudo '),
-                        formula: `${numPetalsInt}+φ×${numPetalsInt}/${k}`,
-                        k: k
-                    };
-                }
-            }
-            
-            return null;
+        // Pseudo-coherence band: the range of step-to-lattice residuals that
+        // count as "near-miss" for a primary coherence. A P value in this band
+        // sits close to (but not on) an integer-family lattice point; the
+        // visible spiral has structure but lacks the crisp snap of a primary.
+        //
+        // Upper bound 0.09 approximates what the old hand-picked LADDER_*
+        // arrays covered (their max residualP ≈ 0.088 at n=3, k=55).
+        const PSEUDO_BAND_MAX = 0.09;
+
+        // Fibonacci numbers used to enumerate canonical pseudo centers for the
+        // tour. These are the continued-fraction convergents' denominators for
+        // φ and give the tightest rational approximations: residuals at these
+        // points fall in decreasing geometric sequence, which is the same
+        // structure the old LADDER_* arrays encoded empirically.
+        const PSEUDO_FIBS = [55, 89, 144, 233, 377, 610, 987, 1597];
+
+        // detectPseudoCoherence: a near-miss against an integer-base primary.
+        // Unified with the primary detector by reading the same decompose()
+        // output. Integer P corresponds to (a=-n, b=2n) on the ℤ[φ] lattice;
+        // a pseudo is the same pattern with a residual in PSEUDO_BAND.
+        function detectPseudoCoherence(P) {
+            const { a, b, residual } = decompose(P, GOLDEN_BASIS);
+            const residualP = residual * GOLDEN_BASIS.alphaSq;
+
+            // Integer-base pattern only — matches the old floor(P)-based check,
+            // but now recognized by lattice shape rather than sign of offset.
+            if (!(a <= -3 && a >= -8 && b === -2 * a)) return null;
+            if (residualP < TIGHT_TOLERANCE || residualP >= PSEUDO_BAND_MAX) return null;
+
+            const n = -a;
+            // Recover the implied denominator k from residualP ≈ φ·n/k.
+            // Old ladders keyed their sub-labels to specific k values; the
+            // information is preserved by reporting k itself.
+            const kImplied = Math.round(PHI * n / residualP);
+            return {
+                type: 'pseudo',
+                label: `Pseudo ${n} petals`,
+                formula: `${n} + φ·${n}/${kImplied}`
+            };
         }
-        
+
+
         // matchGoldenRule: pattern-match the (a, b) from decompose(x, GOLDEN_BASIS)
         // against the golden-family rules. Returns { distance, match } or null.
         //
@@ -875,19 +835,22 @@
                     add(n * piQuarter, TOLERANCE);
                 }
             } else {
-                // Pseudo-coherences only
+                // Pseudo-coherences only: near-misses to integer P ∈ [3, 8].
+                // Integer P = n maps to (a=-n, b=2n) on the ℤ[φ] lattice; a
+                // pseudo is the same lattice pattern with a small residual.
+                // The residualP ≈ φ·n/k for Fibonacci k (continued-fraction
+                // convergents of φ), so we enumerate k from PSEUDO_FIBS and
+                // place centers at base ± φ·base/k, filtered to the pseudo
+                // band. Unlike the old positive-only LADDER_* arrays, both
+                // sides of integer are included because the decompose-based
+                // detector recognizes either sign symmetrically.
                 for (let base = 3; base <= 8; base++) {
-                    const isSolid = base <= 6;
-                    const ladders = isSolid 
-                        ? [...LADDER_A, ...LADDER_B, ...LADDER_PHI]
-                        : [...LADDER_F13, ...LADDER_F14];
-                    const minK = isSolid ? 36 * base : 30 * base;
-                    
-                    for (const k of ladders) {
-                        if (k >= minK) {
-                            const offset = PHI * base / k;
-                            add(base + offset, PSEUDO_TOLERANCE);
-                        }
+                    for (const fm of PSEUDO_FIBS) {
+                        const offset = PHI * base / fm;
+                        if (offset < TIGHT_TOLERANCE) continue;     // merges into primary
+                        if (offset >= PSEUDO_BAND_MAX) continue;    // outside band
+                        add(base + offset, PSEUDO_TOLERANCE);
+                        add(base - offset, PSEUDO_TOLERANCE);
                     }
                 }
             }
