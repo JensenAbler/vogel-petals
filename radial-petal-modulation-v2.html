@@ -503,6 +503,20 @@
                 strengthPeak: 0.5,
             },
             {
+                residue: ((1.44729 % PHI_2) + PHI_2) % PHI_2,
+                count: 2,
+                coreTolerance: 0.00045,
+                shoulderTolerance: 0.0034,
+                strengthPeak: 0.48,
+            },
+            {
+                residue: ((1.46073 % PHI_2) + PHI_2) % PHI_2,
+                count: 7,
+                coreTolerance: 0.00045,
+                shoulderTolerance: 0.0034,
+                strengthPeak: 0.5,
+            },
+            {
                 residue: ((3.0788 % PHI_2) + PHI_2) % PHI_2,
                 count: 4,
                 coreTolerance: 0.001,
@@ -553,6 +567,17 @@
             if (count === 24) return 1.2;
             if (count >= 31) return 1.8;
             return 0.07 * (count - 10);
+        }
+
+        // The clean dyadic pseudo lattice is useful, but at high counts it
+        // starts proposing aliases that are much less convincing than the
+        // empirical low-count pseudo bands we have validated by eye.
+        function pseudoPetalBias(count) {
+            if (count <= 12) return 0;
+            if (count === 13) return 0.25;
+            if (count === 14) return 0.55;
+            if (count === 15) return 0.95;
+            return 1.5 + 0.15 * (count - 16);
         }
 
         function makeCandidate(type, label, formula, distance, tolerance, bias = 0) {
@@ -671,6 +696,7 @@
                     dyadic.formula,
                     dyadic.distanceP,
                     isCore ? PSEUDO_CORE_TOLERANCE : PSEUDO_SHOULDER_TOLERANCE,
+                    pseudoPetalBias(dyadic.count),
                 ));
             }
 
@@ -842,14 +868,16 @@
             const piDist      = Math.abs(P - nearestPiN * piQuarter);
             const halfDiscDist = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
             const r8Dist      = Math.abs(P - nearestHalfInt * PHI_2);
-            const dyadicDist  = findNearestPetalLattice(P, {
+            const dyadic      = findNearestPetalLattice(P, {
                 scale: 2,
                 maxPetals: PSEUDO_PETAL_MAX,
-            }).distanceP;
-            const quarterDist = findNearestPetalLattice(P, {
+            });
+            const dyadicDist  = dyadic.distanceP;
+            const quarter     = findNearestPetalLattice(P, {
                 scale: 4,
                 maxPetals: QUARTER_PSEUDO_MAX,
-            }).distanceP;
+            });
+            const quarterDist = quarter.distanceP;
             const empirical = findNearestEmpiricalPseudo(P);
             const empiricalDist = empirical ? empirical.distanceP : Infinity;
 
@@ -871,7 +899,7 @@
                 ? pseudoStrengthFromNormalized(halfDiscDist / TIGHT_TOLERANCE)
                 : 0;
             const dyadicStrength = pseudoStrengthFromNormalized(
-                dyadicDist / PSEUDO_SHOULDER_TOLERANCE
+                dyadicDist / PSEUDO_SHOULDER_TOLERANCE + pseudoPetalBias(dyadic.count)
             );
             const quarterStrength = pseudoStrengthFromNormalized(
                 quarterDist / PSEUDO_DIFFUSE_TOLERANCE + QUARTER_PSEUDO_BIAS
