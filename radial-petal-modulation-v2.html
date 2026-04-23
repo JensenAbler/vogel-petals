@@ -481,6 +481,15 @@
                 shoulderTolerance: 0.0048,
             },
             {
+                residue: ((3.3418 % PHI_2) + PHI_2) % PHI_2,
+                count: 1,
+                coreTolerance: 0.0009,
+                shoulderTolerance: 0.0038,
+                corePrefix: 'Diffuse pseudo',
+                shoulderPrefix: 'Diffuse pseudo',
+                strengthPeak: 0.4,
+            },
+            {
                 residue: ((3.0788 % PHI_2) + PHI_2) % PHI_2,
                 count: 4,
                 coreTolerance: 0.001,
@@ -628,9 +637,12 @@
             const empirical = findNearestEmpiricalPseudo(P);
             if (empirical && empirical.distanceP < empirical.shoulderTolerance) {
                 const isCore = empirical.distanceP < empirical.coreTolerance;
+                const prefix = isCore
+                    ? (empirical.corePrefix || 'Pseudo')
+                    : (empirical.shoulderPrefix || 'Twisted pseudo');
                 candidates.push(makeCandidate(
                     'pseudo',
-                    formatPetalLabel(empirical.count, isCore ? 'Pseudo' : 'Twisted pseudo'),
+                    formatPetalLabel(empirical.count, prefix),
                     empirical.formula,
                     empirical.distanceP,
                     isCore ? empirical.coreTolerance : empirical.shoulderTolerance,
@@ -794,6 +806,12 @@
         const TOUR_MAX_STEP = 0.015;
         const MAX_SPEED_INCREASE_RATE = 2.0; // Can double speed per frame until cruise
         let lastTourSpeed = TOUR_CRUISE_SPEED;
+
+        function pseudoStrengthFromNormalized(normalizedDistance, peak = PSEUDO_STRENGTH_PEAK) {
+            return peak * Math.exp(
+                -Math.pow(normalizedDistance / PSEUDO_STRENGTH_WIDTH, PSEUDO_STRENGTH_POWER)
+            );
+        }
         
         // coherenceStrength(P): map distance-to-family into [0, 1] for the
         // automatic tour. Exact and pseudo families now live on the same
@@ -805,7 +823,7 @@
             const exactPetal  = findNearestPetalLattice(P);
             const phi2Dist    = Math.abs(P - Math.round(P / PHI_2) * PHI_2);
             const piDist      = Math.abs(P - Math.round(P / piQuarter) * piQuarter);
-            const r7Dist      = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
+            const halfDiscDist = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
             const r8Dist      = Math.abs(P - (Math.round(P / PHI_2 - 0.5) + 0.5) * PHI_2);
             const dyadicDist  = findNearestPetalLattice(P, {
                 scale: 2,
@@ -822,19 +840,30 @@
                 exactPetal.distanceP / TIGHT_TOLERANCE + exactPetalBias(exactPetal.count),
                 phi2Dist       / ALL_TO_CENTER_TOLERANCE,
                 piDist         / TOLERANCE,
-                r7Dist         / TIGHT_TOLERANCE,
                 r8Dist         / TIGHT_TOLERANCE,
             );
 
-            const pseudoNormalizedDist = Math.min(
-                dyadicDist     / PSEUDO_SHOULDER_TOLERANCE,
-                quarterDist    / PSEUDO_DIFFUSE_TOLERANCE + QUARTER_PSEUDO_BIAS,
-                empiricalDist  / (empirical ? empirical.shoulderTolerance : 1),
-            );
-
             const exactStrength = Math.exp(-exactNormalizedDist);
-            const pseudoStrength = PSEUDO_STRENGTH_PEAK * Math.exp(
-                -Math.pow(pseudoNormalizedDist / PSEUDO_STRENGTH_WIDTH, PSEUDO_STRENGTH_POWER)
+            const halfDiscStrength = pseudoStrengthFromNormalized(
+                halfDiscDist / TIGHT_TOLERANCE
+            );
+            const dyadicStrength = pseudoStrengthFromNormalized(
+                dyadicDist / PSEUDO_SHOULDER_TOLERANCE
+            );
+            const quarterStrength = pseudoStrengthFromNormalized(
+                quarterDist / PSEUDO_DIFFUSE_TOLERANCE + QUARTER_PSEUDO_BIAS
+            );
+            const empiricalStrength = empirical
+                ? pseudoStrengthFromNormalized(
+                    empiricalDist / empirical.shoulderTolerance,
+                    empirical.strengthPeak || PSEUDO_STRENGTH_PEAK
+                )
+                : 0;
+            const pseudoStrength = Math.max(
+                halfDiscStrength,
+                dyadicStrength,
+                quarterStrength,
+                empiricalStrength
             );
 
             return Math.max(exactStrength, pseudoStrength);
