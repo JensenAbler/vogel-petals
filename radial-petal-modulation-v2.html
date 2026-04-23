@@ -829,44 +829,47 @@
             
             if (!pseudoMode) {
                 // True coherences only
-                
-                // Integers (3-9)
+
+                // Rule 1: integer P ∈ [3, 9] (direct modulation).
                 for (let n = 3; n <= 9; n++) {
                     add(n, TOLERANCE);
                 }
-                
-                // nφ multiples (n=2..6)
-                for (let n = 2; n <= 6; n++) {
-                    add(n * PHI, TOLERANCE);
+
+                // Rules 2, 3, 4, 5 — ℤ[φ] lattice points, enumerated by the
+                // (a, b) patterns that matchGoldenRule() recognizes. Centers
+                // come from composeP(a, b, GOLDEN_BASIS) so detection and
+                // navigation share the same source of truth.
+                const goldenFamilies = [
+                    // Rule 2: (n, -n), n ∈ [2, 6] — nφ centers
+                    { pairs: Array.from({ length: 5 }, (_, i) => [i + 2, -(i + 2)]),
+                      radius: TOLERANCE },
+                    // Rule 3: (2n, -3n), n ∈ [5, 15] — n/φ centers
+                    { pairs: Array.from({ length: 11 }, (_, i) => [2 * (i + 5), -3 * (i + 5)]),
+                      radius: TOLERANCE },
+                    // Rule 4: (0, n), n ∈ [1, 4] — nφ² centers
+                    { pairs: Array.from({ length: 4 }, (_, i) => [0, i + 1]),
+                      radius: TIGHT_TOLERANCE },
+                    // Rule 5: (Fib(n-2), Fib(n-3)) for n ∈ {3, 4, 5}
+                    { pairs: [[1, 0], [1, 1], [2, 1]],
+                      radius: TIGHT_TOLERANCE },
+                ];
+                for (const { pairs, radius } of goldenFamilies) {
+                    for (const [a, b] of pairs) {
+                        add(composeP(a, b, GOLDEN_BASIS), radius);
+                    }
                 }
-                
-                // n/φ divisions (n=5..15)
-                for (let n = 5; n <= 15; n++) {
-                    add(n / PHI, TOLERANCE);
-                }
-                
-                // nφ² multiples - all-to-center (n=1..4)
-                for (let n = 1; n <= 4; n++) {
-                    add(n * PHI_2, TIGHT_TOLERANCE);
-                }
-                
-                // φ powers - half-disc
-                add(PHI_3, TIGHT_TOLERANCE);
-                add(PHI_4, TIGHT_TOLERANCE);
-                add(PHI_5, TIGHT_TOLERANCE);
-                
-                // (n/2)φ² + 0.5 half-disc variants (n=2..7)
+
+                // Rule 7 / 8 — half-integer ½-shift centers. Not ℤ[φ] lattice
+                // points, so still enumerated explicitly.
                 const halfPhi2 = PHI_2 / 2;
                 for (let n = 2; n <= 7; n++) {
                     add(n * halfPhi2 + 0.5, TIGHT_TOLERANCE);
                 }
-                
-                // (n + 0.5)φ² spirals (n=1..3)
                 for (let n = 1; n <= 3; n++) {
                     add((n + 0.5) * PHI_2, TIGHT_TOLERANCE);
                 }
-                
-                // π-based: nπ/4 (n=4..12)
+
+                // Rule 6: π-family nπ/4 centers (separate mechanism).
                 const piQuarter = PI / 4;
                 for (let n = 4; n <= 12; n++) {
                     add(n * piQuarter, TOLERANCE);
