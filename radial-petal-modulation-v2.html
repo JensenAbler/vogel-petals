@@ -27,6 +27,21 @@
             --glow-blue: rgba(30, 90, 150, 0.4);
             --glow-yellow: rgba(244, 208, 63, 0.3);
         }
+
+        body.bw-scheme {
+            --bg-deep: #ffffff;
+            --bg-surface: #ffffff;
+            --text-primary: #050505;
+            --text-muted: #383838;
+            --accent-blue: #222222;
+            --accent-yellow: #050505;
+            --accent-green: #111111;
+            --accent-purple: #2b2b2b;
+            --accent-cyan: #050505;
+            --accent-orange: #4f4f4f;
+            --glow-blue: rgba(0, 0, 0, 0);
+            --glow-yellow: rgba(0, 0, 0, 0);
+        }
         
         html, body {
             height: 100%;
@@ -120,12 +135,6 @@
             text-align: center;
         }
         
-        .structure-indicator.half-disc {
-            background: rgba(244, 208, 63, 0.2);
-            color: var(--accent-yellow);
-            box-shadow: 0 0 15px var(--glow-yellow);
-        }
-        
         .structure-indicator.all-to-center {
             background: rgba(168, 85, 247, 0.2);
             color: var(--accent-purple);
@@ -157,15 +166,20 @@
             border: 1px dashed rgba(251, 191, 36, 0.4);
         }
         
-        .structure-indicator.conch {
-            background: rgba(251, 146, 60, 0.2);
-            color: var(--accent-orange);
-            box-shadow: 0 0 15px rgba(251, 146, 60, 0.4);
-        }
-        
         .structure-indicator.unclear {
             background: rgba(120, 120, 128, 0.1);
             color: var(--text-muted);
+        }
+
+        body.bw-scheme .structure-indicator {
+            background: rgba(0, 0, 0, 0.06);
+            color: var(--text-primary);
+            border: 1px solid rgba(0, 0, 0, 0.16);
+            box-shadow: none;
+        }
+
+        body.bw-scheme .structure-indicator.pseudo {
+            border-style: dashed;
         }
         
         .label-container {
@@ -290,14 +304,192 @@
             color: var(--accent-cyan);
             box-shadow: 0 0 15px rgba(34, 211, 238, 0.4);
         }
+
+        body.bw-scheme .granularity-btn.active,
+        body.bw-scheme .play-btn.playing,
+        body.bw-scheme .tour-btn.active {
+            background: rgba(0, 0, 0, 0.08);
+            border-color: rgba(0, 0, 0, 0.72);
+            color: var(--text-primary);
+            box-shadow: none;
+        }
         
         .playback-controls {
             display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
             gap: 0.6rem;
             align-items: center;
             margin-top: 0.4rem;
         }
-        
+
+        .tour-response-panel {
+            position: fixed;
+            top: 0.75rem;
+            right: 0.75rem;
+            width: min(520px, calc(100vw - 1.5rem));
+            max-height: calc(100vh - 1.5rem);
+            overflow: auto;
+            background: rgba(18, 18, 31, 0.94);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+            border-radius: 0.5rem;
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.38);
+            padding: 0.7rem;
+            pointer-events: auto;
+            cursor: default;
+            z-index: 900;
+            backdrop-filter: blur(12px);
+        }
+
+        .tour-response-panel[hidden] {
+            display: none;
+        }
+
+        canvas.tour-graph-canvas {
+            display: block;
+            width: 100%;
+            height: 230px;
+            border-radius: 0.35rem;
+            background: #0b0d16;
+            box-shadow: none;
+            cursor: default;
+            pointer-events: auto;
+            touch-action: none;
+        }
+
+        .resonance-category-graphs {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.5rem;
+            margin-top: 0.6rem;
+        }
+
+        canvas.resonance-category-canvas {
+            display: block;
+            width: 100%;
+            height: 120px;
+            border-radius: 0.35rem;
+            background: #0b0d16;
+            box-shadow: none;
+            pointer-events: none;
+        }
+
+        body.bw-scheme #canvas {
+            border-radius: 0;
+            background: #ffffff;
+            box-shadow: none;
+        }
+
+        body.bw-scheme .granularity-btn,
+        body.bw-scheme .play-btn,
+        body.bw-scheme .tour-btn {
+            background: #ffffff;
+            border-color: rgba(0, 0, 0, 0.34);
+            color: #111111;
+        }
+
+        body.bw-scheme .granularity-btn:hover,
+        body.bw-scheme .play-btn:hover,
+        body.bw-scheme .tour-btn:hover {
+            background: rgba(0, 0, 0, 0.04);
+            border-color: rgba(0, 0, 0, 0.56);
+        }
+
+        body.bw-scheme .tour-response-panel {
+            background: rgba(255, 255, 255, 0.96);
+            border-color: rgba(0, 0, 0, 0.24);
+            box-shadow: 0 14px 40px rgba(0, 0, 0, 0.12);
+        }
+
+        .coherence-param-controls {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.42rem 0.6rem;
+            margin-top: 0.65rem;
+            padding-top: 0.65rem;
+            border-top: 1px solid rgba(168, 85, 247, 0.18);
+        }
+
+        .coherence-param-control {
+            display: grid;
+            grid-template-columns: 5.2rem minmax(0, 1fr) 2.8rem;
+            gap: 0.35rem;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+
+        .coherence-param-control input {
+            width: 100%;
+            accent-color: var(--accent-purple);
+            cursor: pointer;
+        }
+
+        #coherenceAngularMultiplierInput {
+            accent-color: var(--accent-green);
+        }
+
+        #coherenceRationalMultiplierInput {
+            accent-color: var(--accent-orange);
+        }
+
+        .coherence-param-control output {
+            color: var(--text-primary);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .tour-remap-controls {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.42rem 0.6rem;
+            margin-top: 0.65rem;
+        }
+
+        .tour-remap-control {
+            display: grid;
+            grid-template-columns: 4.2rem minmax(0, 1fr) 2.8rem;
+            gap: 0.35rem;
+            align-items: center;
+            color: var(--text-muted);
+            font-size: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+        }
+
+        .tour-remap-control input {
+            width: 100%;
+            accent-color: var(--accent-yellow);
+            cursor: pointer;
+        }
+
+        .tour-remap-control output {
+            color: var(--text-primary);
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        @media (max-width: 760px), (max-height: 700px) {
+            .tour-response-panel {
+                top: auto;
+                right: 0.5rem;
+                bottom: 2.6rem;
+                width: calc(100vw - 1rem);
+                max-height: 48vh;
+            }
+
+            .tour-remap-controls {
+                grid-template-columns: 1fr;
+            }
+
+            .resonance-category-graphs,
+            .coherence-param-controls {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .drag-hint {
             position: fixed;
             bottom: 0.8rem;
@@ -411,6 +603,80 @@
         <div class="playback-controls">
             <button class="tour-btn" id="tourBtn">🎯 Coherence Tour</button>
             <button class="tour-btn" id="colorBtn">🎨 Birth Order Colors</button>
+            <button class="tour-btn" id="schemeBtn">B/W Scheme</button>
+            <button class="tour-btn" id="tourSettingsBtn" aria-expanded="false" aria-controls="tourResponsePanel">Tour Response</button>
+        </div>
+    </div>
+
+    <div class="tour-response-panel" id="tourResponsePanel" hidden>
+        <canvas class="tour-graph-canvas" id="tourGraphCanvas"></canvas>
+        <div class="resonance-category-graphs">
+            <canvas class="resonance-category-canvas" id="angularGraphCanvas"></canvas>
+            <canvas class="resonance-category-canvas" id="rationalGraphCanvas"></canvas>
+        </div>
+        <div class="coherence-param-controls" id="coherenceParamControls">
+            <label class="coherence-param-control">
+                <span>Angular x</span>
+                <input id="coherenceAngularMultiplierInput" type="range" min="0" max="3" step="0.05" value="1">
+                <output id="coherenceAngularMultiplierOutput"></output>
+            </label>
+            <label class="coherence-param-control">
+                <span>Rational x</span>
+                <input id="coherenceRationalMultiplierInput" type="range" min="0" max="3" step="0.05" value="1">
+                <output id="coherenceRationalMultiplierOutput"></output>
+            </label>
+        </div>
+        <div class="tour-remap-controls" id="tourRemapControls">
+            <label class="tour-remap-control">
+                <span>Range</span>
+                <input id="tourRangeInput" type="range" min="0.0001" max="0.25" step="0.0001" value="0.063">
+                <output id="tourRangeOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>Black</span>
+                <input id="tourBlackInput" type="range" min="0" max="0.95" step="0.01" value="0">
+                <output id="tourBlackOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>White</span>
+                <input id="tourWhiteInput" type="range" min="0.05" max="1" step="0.01" value="1">
+                <output id="tourWhiteOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>Gamma</span>
+                <input id="tourGammaInput" type="range" min="0.2" max="3" step="0.05" value="1.45">
+                <output id="tourGammaOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>Smoothing</span>
+                <input id="tourSmoothingInput" type="range" min="0" max="250" step="1" value="200">
+                <output id="tourSmoothingOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>Input</span>
+                <input id="tourInputGainInput" type="range" min="0" max="2.5" step="0.05" value="1">
+                <output id="tourInputGainOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>Output</span>
+                <input id="tourOutputGainInput" type="range" min="0" max="2" step="0.05" value="0.8">
+                <output id="tourOutputGainOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>Lift</span>
+                <input id="tourLiftInput" type="range" min="-1" max="1" step="0.01" value="0">
+                <output id="tourLiftOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>Multiply</span>
+                <input id="tourMultiplyInput" type="range" min="0" max="3" step="0.05" value="1.05">
+                <output id="tourMultiplyOutput"></output>
+            </label>
+            <label class="tour-remap-control">
+                <span>Offset</span>
+                <input id="tourOffsetInput" type="range" min="-1" max="1" step="0.01" value="-0.12">
+                <output id="tourOffsetOutput"></output>
+            </label>
         </div>
     </div>
     
@@ -430,416 +696,10 @@
             const psi = (1 + Math.sqrt(5)) / 2;
             return { psi, psiName: 'φ', alphaSq: psi * psi };
         })();
-
-        // Legacy scalar aliases. Existing detection rules still read these;
-        // subsequent commits will route more sites through GOLDEN_BASIS.
+        // Scalar aliases used throughout the resonance model and renderer.
         const PHI = GOLDEN_BASIS.psi;              // φ ≈ 1.618
         const PHI_2 = GOLDEN_BASIS.alphaSq;         // φ² ≈ 2.618
         const PI = Math.PI;
-        
-        const TOLERANCE = 0.012;
-        const TIGHT_TOLERANCE = 0.005;
-        const ALL_TO_CENTER_TOLERANCE = 0.013;
-        const GENERAL_PETAL_MAX = 40;
-        const PSEUDO_PETAL_MAX = 20;
-        const QUARTER_PSEUDO_MAX = 4;
-        const PSEUDO_CORE_TOLERANCE = 0.0009;
-        const PSEUDO_SHOULDER_TOLERANCE = 0.0045;
-        const PSEUDO_DIFFUSE_TOLERANCE = 0.0035;
-        const QUARTER_PSEUDO_BIAS = 0.35;
-        const PSEUDO_STRENGTH_PEAK = 0.62;
-        const PSEUDO_STRENGTH_WIDTH = 0.8;
-        const PSEUDO_STRENGTH_POWER = 1.7;
-        const DISPLAY_COHERENCE_CUTOFF = 1.45;
-
-        // Empirical exceptions that survive φ² offset shifts but are not yet
-        // explained by the clean dyadic lattice rule. We keep them explicit so
-        // the pseudo predictor is honest about what is theory-driven vs tuned.
-        const EMPIRICAL_PSEUDO_FAMILIES = [
-            {
-                residue: ((3.2849 % PHI_2) + PHI_2) % PHI_2,
-                count: 2,
-                coreTolerance: 0.0009,
-                shoulderTolerance: 0.0045,
-            },
-            {
-                residue: ((3.4120 % PHI_2) + PHI_2) % PHI_2,
-                count: 5,
-                coreTolerance: 0.0009,
-                shoulderTolerance: 0.0045,
-            },
-            {
-                residue: ((3.1574 % PHI_2) + PHI_2) % PHI_2,
-                count: 1,
-                coreTolerance: 0.001,
-                shoulderTolerance: 0.0042,
-            },
-            {
-                residue: ((3.3634 % PHI_2) + PHI_2) % PHI_2,
-                count: 3,
-                coreTolerance: 0.001,
-                shoulderTolerance: 0.0048,
-            },
-            {
-                residue: ((3.3418 % PHI_2) + PHI_2) % PHI_2,
-                count: 1,
-                coreTolerance: 0.0009,
-                shoulderTolerance: 0.0038,
-                corePrefix: 'Diffuse pseudo',
-                shoulderPrefix: 'Diffuse pseudo',
-                strengthPeak: 0.4,
-            },
-            {
-                residue: ((3.6967 % PHI_2) + PHI_2) % PHI_2,
-                count: 2,
-                coreTolerance: 0.00035,
-                shoulderTolerance: 0.0036,
-            },
-            {
-                residue: ((1.53960 % PHI_2) + PHI_2) % PHI_2,
-                count: 2,
-                coreTolerance: 0.00045,
-                shoulderTolerance: 0.0038,
-                strengthPeak: 0.5,
-            },
-            {
-                residue: ((1.44729 % PHI_2) + PHI_2) % PHI_2,
-                count: 2,
-                coreTolerance: 0.00045,
-                shoulderTolerance: 0.0034,
-                strengthPeak: 0.48,
-            },
-            {
-                residue: ((1.46073 % PHI_2) + PHI_2) % PHI_2,
-                count: 7,
-                coreTolerance: 0.00045,
-                shoulderTolerance: 0.0034,
-                strengthPeak: 0.5,
-            },
-            {
-                residue: ((1.74190601 % PHI_2) + PHI_2) % PHI_2,
-                count: 7,
-                coreTolerance: 0.00045,
-                shoulderTolerance: 0.0032,
-                strengthPeak: 0.5,
-            },
-            {
-                residue: ((1.74493601 % PHI_2) + PHI_2) % PHI_2,
-                type: 'spiral',
-                label: 'Core + spiral',
-                coreTolerance: 0.00045,
-                shoulderTolerance: 0.003,
-                strengthPeak: 0.44,
-            },
-            {
-                residue: ((1.74995601 % PHI_2) + PHI_2) % PHI_2,
-                count: 6,
-                coreTolerance: 0.00045,
-                shoulderTolerance: 0.0032,
-                strengthPeak: 0.48,
-            },
-            {
-                residue: ((3.0788 % PHI_2) + PHI_2) % PHI_2,
-                count: 4,
-                coreTolerance: 0.001,
-                shoulderTolerance: 0.0042,
-            },
-            {
-                residue: ((3.03006 % PHI_2) + PHI_2) % PHI_2,
-                count: 4,
-                coreTolerance: 0.0011,
-                shoulderTolerance: 0.0042,
-            },
-        ];
-
-        function mod(x, period) {
-            return ((x % period) + period) % period;
-        }
-
-        function circularDistance(a, b, period) {
-            const delta = Math.abs(a - b);
-            return Math.min(delta, period - delta);
-        }
-
-        function formatPetalLabel(count, prefix = '') {
-            const noun = count === 1 ? 'petal' : 'petals';
-            return prefix ? `${prefix} ${count} ${noun}` : `${count} ${noun}`;
-        }
-
-        function formatSignedPhi(count, sign) {
-            return `${sign < 0 ? '-' : ''}${count}φ`;
-        }
-
-        function formatLatticeFormula(scale, count, sign, integerShift, approximate = false) {
-            const lhs = scale === 1 ? 'P/φ²' : `${scale}P/φ²`;
-            const relation = approximate ? '≈' : '=';
-            let rhs = formatSignedPhi(count, sign);
-            if (integerShift !== 0) {
-                rhs += ` ${integerShift > 0 ? '+' : '-'} ${Math.abs(integerShift)}`;
-            }
-            return `${lhs} ${relation} ${rhs}`;
-        }
-
-        // The exact lattice overgenerates high petal counts relative to what is
-        // visually stable. Keep the counts we have actually validated strong,
-        // and gently demote the rest so pseudo bands can outrank brittle
-        // high-count aliases like 24 and 31.
-        function exactPetalBias(count) {
-            if (count <= 10) return 0;
-            if (count === 24) return 1.2;
-            if (count >= 31) return 1.8;
-            return 0.07 * (count - 10);
-        }
-
-        // The clean dyadic pseudo lattice is useful, but at high counts it
-        // starts proposing aliases that are much less convincing than the
-        // empirical low-count pseudo bands we have validated by eye.
-        function pseudoPetalBias(count) {
-            if (count <= 12) return 0;
-            if (count === 13) return 0.25;
-            if (count === 14) return 0.55;
-            if (count === 15) return 0.95;
-            return 1.5 + 0.15 * (count - 16);
-        }
-
-        function makeCandidate(type, label, formula, distance, tolerance, bias = 0) {
-            return {
-                type,
-                label,
-                formula,
-                distance,
-                tolerance,
-                normalizedDistance: distance / tolerance + bias,
-            };
-        }
-
-        function chooseBestCandidate(candidates) {
-            const valid = candidates.filter(Boolean);
-            if (valid.length === 0) return null;
-            return valid.reduce((best, candidate) =>
-                candidate.normalizedDistance < best.normalizedDistance ? candidate : best
-            );
-        }
-
-        // General petal lattice:
-        //   exact petals   ↔  P/φ² ≈ ±nφ (mod 1)
-        //   dyadic pseudo  ↔  2P/φ² ≈ ±nφ (mod 1)
-        //   quarter echo   ↔  4P/φ² ≈ ±nφ (mod 1)
-        //
-        // Integer shifts in step-space are invisible under the modulation,
-        // which is why the detector works modulo 1 and automatically bakes in
-        // the P -> P + φ² offset invariance.
-        function findNearestPetalLattice(P, { scale = 1, maxPetals = GENERAL_PETAL_MAX } = {}) {
-            const step = (scale * P) / PHI_2;
-            let best = null;
-
-            for (let count = 1; count <= maxPetals; count++) {
-                for (const sign of [-1, 1]) {
-                    const integerShift = Math.round(step - sign * count * PHI);
-                    const latticeStep = sign * count * PHI + integerShift;
-                    const distanceP = Math.abs(step - latticeStep) * PHI_2 / scale;
-
-                    if (!best || distanceP < best.distanceP) {
-                        best = {
-                            count,
-                            sign,
-                            integerShift,
-                            distanceP,
-                            formula: formatLatticeFormula(scale, count, sign, integerShift, scale !== 1),
-                        };
-                    }
-                }
-            }
-
-            return best;
-        }
-
-        function findNearestEmpiricalPseudo(P) {
-            const residue = mod(P, PHI_2);
-            let best = null;
-
-            for (const family of EMPIRICAL_PSEUDO_FAMILIES) {
-                const distanceP = circularDistance(residue, family.residue, PHI_2);
-                if (!best || distanceP < best.distanceP) {
-                    best = {
-                        ...family,
-                        distanceP,
-                        formula: `P ≡ ${family.residue.toFixed(6)} (mod φ²)`,
-                    };
-                }
-            }
-
-            return best;
-        }
-
-        function detectPseudoCoherence(P) {
-            const candidates = [];
-
-            // Former "half-disc" centers are now treated as pseudo 1-petal
-            // coherences: they behave like a once-removed echo, not like a
-            // primary exact family.
-            const halfPhi2 = PHI_2 / 2;
-            const nHalfPhi2PlusHalf = (P - 0.5) / halfPhi2;
-            const nearestNHalfPhi2 = Math.round(nHalfPhi2PlusHalf);
-            const nHalfPhi2Distance = Math.abs(P - (nearestNHalfPhi2 * halfPhi2 + 0.5));
-            if (nHalfPhi2Distance < TIGHT_TOLERANCE && Math.abs(nearestNHalfPhi2) >= 2) {
-                const m = nearestNHalfPhi2;
-                const formula = m % 2 === 0 ? `${m / 2}φ² + ½` : `${m}/2·φ² + ½`;
-                candidates.push(makeCandidate(
-                    'pseudo',
-                    'Pseudo 1 petal',
-                    formula,
-                    nHalfPhi2Distance,
-                    TIGHT_TOLERANCE,
-                ));
-            }
-
-            const empirical = findNearestEmpiricalPseudo(P);
-            if (empirical && empirical.distanceP < empirical.shoulderTolerance) {
-                const isCore = empirical.distanceP < empirical.coreTolerance;
-                const prefix = isCore
-                    ? (empirical.corePrefix || 'Pseudo')
-                    : (empirical.shoulderPrefix || 'Twisted pseudo');
-                const label = isCore
-                    ? (empirical.coreLabel || empirical.label)
-                    : (empirical.shoulderLabel || empirical.label);
-                candidates.push(makeCandidate(
-                    empirical.type || 'pseudo',
-                    label || formatPetalLabel(empirical.count, prefix),
-                    empirical.formulaLabel || empirical.formula,
-                    empirical.distanceP,
-                    isCore ? empirical.coreTolerance : empirical.shoulderTolerance,
-                ));
-            }
-
-            const dyadic = findNearestPetalLattice(P, { scale: 2, maxPetals: PSEUDO_PETAL_MAX });
-            if (dyadic && dyadic.distanceP < PSEUDO_SHOULDER_TOLERANCE) {
-                const isCore = dyadic.distanceP < PSEUDO_CORE_TOLERANCE;
-                candidates.push(makeCandidate(
-                    'pseudo',
-                    formatPetalLabel(dyadic.count, isCore ? 'Pseudo' : 'Twisted pseudo'),
-                    dyadic.formula,
-                    dyadic.distanceP,
-                    isCore ? PSEUDO_CORE_TOLERANCE : PSEUDO_SHOULDER_TOLERANCE,
-                    pseudoPetalBias(dyadic.count),
-                ));
-            }
-
-            const quarter = findNearestPetalLattice(P, { scale: 4, maxPetals: QUARTER_PSEUDO_MAX });
-            if (quarter && quarter.distanceP < PSEUDO_DIFFUSE_TOLERANCE) {
-                candidates.push(makeCandidate(
-                    'pseudo',
-                    formatPetalLabel(quarter.count, 'Diffuse pseudo'),
-                    quarter.formula,
-                    quarter.distanceP,
-                    PSEUDO_DIFFUSE_TOLERANCE,
-                    QUARTER_PSEUDO_BIAS,
-                ));
-            }
-
-            return chooseBestCandidate(candidates);
-        }
-
-        function detectExactCoherence(x) {
-            const candidates = [];
-
-            // Exact all-to-center coherences are the integer points in step-space.
-            const step = x / PHI_2;
-            const nearestStepInteger = Math.round(step);
-            const phi2Distance = Math.abs(step - nearestStepInteger) * PHI_2;
-            if (phi2Distance < ALL_TO_CENTER_TOLERANCE && Math.abs(nearestStepInteger) >= 1) {
-                candidates.push(makeCandidate(
-                    'all-to-center',
-                    'All-to-center',
-                    `${nearestStepInteger}φ²`,
-                    phi2Distance,
-                    ALL_TO_CENTER_TOLERANCE,
-                ));
-            }
-
-            // General exact petal lattice.
-            const latticePetal = findNearestPetalLattice(x);
-            if (latticePetal && latticePetal.distanceP < TIGHT_TOLERANCE) {
-                candidates.push(makeCandidate(
-                    'petals',
-                    formatPetalLabel(latticePetal.count),
-                    latticePetal.formula,
-                    latticePetal.distanceP,
-                    TIGHT_TOLERANCE,
-                    exactPetalBias(latticePetal.count),
-                ));
-            }
-
-            // Rule 8: (n + 0.5)φ² → spirals, half-integer multiples of φ², any |n| ≥ 1.
-            const nPlusHalfPhi2 = x / PHI_2;
-            const nearestHalfInt = Math.round(nPlusHalfPhi2 - 0.5) + 0.5;
-            const halfIntPhi2Distance = Math.abs(x - nearestHalfInt * PHI_2);
-            if (halfIntPhi2Distance < TIGHT_TOLERANCE && Math.abs(nearestHalfInt) >= 1.5) {
-                const nVal = nearestHalfInt < 0 ? nearestHalfInt + 0.5 : nearestHalfInt - 0.5;
-                candidates.push(makeCandidate(
-                    'spiral',
-                    'Spirals',
-                    `${nVal}½φ²`,
-                    halfIntPhi2Distance,
-                    TIGHT_TOLERANCE,
-                ));
-            }
-
-            // Rule 6: numPetals = nπ/4 → spirals/dual-spokes, any |n| ≥ 4.
-            const piQuarter = PI / 4;
-            const nearestPiN = Math.round(x / piQuarter);
-            const piDistance = Math.abs(x - nearestPiN * piQuarter);
-            if (piDistance < TOLERANCE && Math.abs(nearestPiN) >= 4) {
-                let piLabel;
-                let spiralType;
-                
-                if (nearestPiN % 4 === 0) {
-                    // Integer multiple of π
-                    piLabel = `${nearestPiN / 4}π`;
-                    spiralType = 'Dual-spokes';
-                } else if (nearestPiN % 2 === 0) {
-                    // Half-integer multiple of π (nπ/2)
-                    piLabel = `${nearestPiN / 2}π/2`;
-                    spiralType = 'Dual-spokes';
-                } else {
-                    // Quarter multiple of π (nπ/4)
-                    piLabel = `${nearestPiN}π/4`;
-                    spiralType = 'Spiral + dark core';
-                }
-                
-                candidates.push(makeCandidate(
-                    'pi-coherent',
-                    spiralType,
-                    piLabel,
-                    piDistance,
-                    TOLERANCE,
-                ));
-            }
-
-            return chooseBestCandidate(candidates);
-        }
-
-        function detectCoherence(x) {
-            const bestMatch = chooseBestCandidate([
-                detectExactCoherence(x),
-                detectPseudoCoherence(x),
-            ]);
-
-            if (!bestMatch || bestMatch.normalizedDistance > DISPLAY_COHERENCE_CUTOFF) {
-                return {
-                    type: 'unclear',
-                    label: 'Unclear',
-                    formula: ''
-                };
-            }
-
-            return {
-                type: bestMatch.type,
-                label: bestMatch.label,
-                formula: bestMatch.formula
-            };
-        }
-        
         // Canvas and rendering setup
         const canvas = document.getElementById('canvas');
         const ctx = canvas.getContext('2d');
@@ -851,6 +711,41 @@
         const playBtn = document.getElementById('playBtn');
         const tourBtn = document.getElementById('tourBtn');
         const colorBtn = document.getElementById('colorBtn');
+        const schemeBtn = document.getElementById('schemeBtn');
+        const tourSettingsBtn = document.getElementById('tourSettingsBtn');
+        const tourResponsePanel = document.getElementById('tourResponsePanel');
+        const tourGraphCanvas = document.getElementById('tourGraphCanvas');
+        const tourGraphCtx = tourGraphCanvas.getContext('2d');
+        const angularGraphCanvas = document.getElementById('angularGraphCanvas');
+        const rationalGraphCanvas = document.getElementById('rationalGraphCanvas');
+        const categoryGraphs = [
+            { key: 'angular', label: 'Angular', canvas: angularGraphCanvas, ctx: angularGraphCanvas.getContext('2d'), color: 'rgba(74, 222, 128, 0.9)' },
+            { key: 'rational', label: 'Rational', canvas: rationalGraphCanvas, ctx: rationalGraphCanvas.getContext('2d'), color: 'rgba(251, 146, 60, 0.9)' },
+        ];
+        const coherenceAngularMultiplierInput = document.getElementById('coherenceAngularMultiplierInput');
+        const coherenceAngularMultiplierOutput = document.getElementById('coherenceAngularMultiplierOutput');
+        const coherenceRationalMultiplierInput = document.getElementById('coherenceRationalMultiplierInput');
+        const coherenceRationalMultiplierOutput = document.getElementById('coherenceRationalMultiplierOutput');
+        const tourRangeInput = document.getElementById('tourRangeInput');
+        const tourRangeOutput = document.getElementById('tourRangeOutput');
+        const tourBlackInput = document.getElementById('tourBlackInput');
+        const tourBlackOutput = document.getElementById('tourBlackOutput');
+        const tourWhiteInput = document.getElementById('tourWhiteInput');
+        const tourWhiteOutput = document.getElementById('tourWhiteOutput');
+        const tourGammaInput = document.getElementById('tourGammaInput');
+        const tourGammaOutput = document.getElementById('tourGammaOutput');
+        const tourSmoothingInput = document.getElementById('tourSmoothingInput');
+        const tourSmoothingOutput = document.getElementById('tourSmoothingOutput');
+        const tourInputGainInput = document.getElementById('tourInputGainInput');
+        const tourInputGainOutput = document.getElementById('tourInputGainOutput');
+        const tourOutputGainInput = document.getElementById('tourOutputGainInput');
+        const tourOutputGainOutput = document.getElementById('tourOutputGainOutput');
+        const tourLiftInput = document.getElementById('tourLiftInput');
+        const tourLiftOutput = document.getElementById('tourLiftOutput');
+        const tourMultiplyInput = document.getElementById('tourMultiplyInput');
+        const tourMultiplyOutput = document.getElementById('tourMultiplyOutput');
+        const tourOffsetInput = document.getElementById('tourOffsetInput');
+        const tourOffsetOutput = document.getElementById('tourOffsetOutput');
         
         // State
         let numPetals = 3.0;
@@ -860,93 +755,699 @@
         let isPlaying = true; // Start playing by default
         let isTourMode = true; // Start in tour mode by default
         let colorByBirthOrder = false; // When true, use blue-to-red gradient instead of petalShape
+        let isBlackWhiteScheme = false;
         let animationId = null;
         let lastFrameTime = 0;
         const FRAME_INTERVAL = 1000 / 60;
-        
+
         // Tour mode settings
         const TOUR_CRUISE_SPEED = 0.004;
         const TOUR_PEAK_SPEED = 0.000001;
         const TOUR_MAX_STEP = 0.015;
         const MAX_SPEED_INCREASE_RATE = 2.0; // Can double speed per frame until cruise
         let lastTourSpeed = TOUR_CRUISE_SPEED;
+        const TOUR_GRAPH_DRAW_SAMPLES = 96;
+        const TOUR_GRAPH_PLAYHEAD_T = 0.36;
+        const tourRemap = {
+            range: Number(tourRangeInput.value),
+            black: Number(tourBlackInput.value),
+            white: Number(tourWhiteInput.value),
+            gamma: Number(tourGammaInput.value),
+            smoothing: Number(tourSmoothingInput.value),
+            input: Number(tourInputGainInput.value),
+            output: Number(tourOutputGainInput.value),
+            lift: Number(tourLiftInput.value),
+            multiply: Number(tourMultiplyInput.value),
+            offset: Number(tourOffsetInput.value),
+        };
+        // Harmonic resonance classifier for the sin^8 radial modulation.
+        const HARMONIC_RESONANCE_CHANNELS = [
+            { m: 1, amplitude: -7 / 16 },
+            { m: 2, amplitude: 7 / 32 },
+            { m: 3, amplitude: -1 / 16 },
+            { m: 4, amplitude: 1 / 128 },
+        ];
+        const HARMONIC_PRIMARY_WEIGHT = Math.abs(HARMONIC_RESONANCE_CHANNELS[0].amplitude);
+        const HARMONIC_PETAL_LIMIT = 40;
+        const HARMONIC_MIXED_LIMIT = 8;
+        const HARMONIC_HYBRID_LIMIT = 12;
+        const HARMONIC_EFFECTIVE_LENGTH = 280;
+        const HARMONIC_DISPLAY_CUTOFF = 0.065;
+        const HARMONIC_GROUND_MIN = 0.2;
+        const HARMONIC_GROUND_RATIO = 0.8;
+        const HARMONIC_CORE_MIN = 0.12;
+        const HARMONIC_HYBRID_RATIO = 0.25;
+        const HARMONIC_RATIONAL_MIN = 0.15;
+        const HARMONIC_RATIONAL_RATIO = 1.1;
+        const HARMONIC_ENVELOPE_RATIO = 0.9;
+        const HARMONIC_SECOND_CORE_ECHO_TOUR_BOOST = 2.0;
+        const TOUR_SMOOTHING_MAX_RADIUS = 0.0125;
+        const TOUR_SMOOTHING_SAMPLES_PER_SIDE = 6;
+        const COHERENCE_ANALYSIS_CACHE_LIMIT = 2500;
+        const coherenceTypeMultipliers = {
+            angular: Number(coherenceAngularMultiplierInput.value),
+            rational: Number(coherenceRationalMultiplierInput.value),
+        };
+        const HARMONIC_RATIONAL_CHANNELS = [
+            {
+                q: 5,
+                weight: 0.46,
+                effectiveLength: 42,
+                type: 'pi-coherent',
+                label: 'Dual-spokes',
+                formula: '5P/phi^2 ~= integer',
+            },
+            {
+                q: 10,
+                weight: 0.52,
+                effectiveLength: 34,
+                type: 'pi-coherent',
+                label: 'Spiral + dark core',
+                formula: '10P/phi^2 ~= integer',
+            },
+        ];
+        const THEORY_BENCHMARKS = [
+            { name: 'Ground', P: PHI_2 },
+            { name: 'Fibonacci petals', P: Math.pow(PHI, 5) },
+            { name: 'Dual-spokes pi/2', P: PI / 2 },
+            { name: 'Dark-core 3pi/4', P: 3 * PI / 4 },
+            { name: 'Ground overlap 5pi/3', P: 5 * PI / 3 },
+            { name: 'Pseudo 1', P: 3.1574 },
+            { name: 'Diffuse pseudo 1', P: 3.3418 },
+            { name: 'Pseudo 2', P: 3.2849 },
+            { name: 'Diffuse pseudo 2', P: 1.44729 },
+            { name: 'Pseudo 3', P: 3.3634 },
+            { name: 'Pseudo 4', P: 3.0788 },
+            { name: 'Pseudo 5', P: 3.4120 },
+            { name: 'Pseudo 7', P: 1.46073 },
+            { name: '7-carrier shoulder', P: 1.74190601 },
+            { name: 'Core + 7 hybrid', P: 1.74493601 },
+            { name: '7 echo peak', P: 1.74995601 },
+            { name: 'Pseudo 11 near pi/2', P: 1.5729490168751576 },
+        ];
 
-        function pseudoStrengthFromNormalized(normalizedDistance, peak = PSEUDO_STRENGTH_PEAK) {
-            return peak * Math.exp(
-                -Math.pow(normalizedDistance / PSEUDO_STRENGTH_WIDTH, PSEUDO_STRENGTH_POWER)
+        function harmonicMod(x, period) {
+            return ((x % period) + period) % period;
+        }
+
+        function harmonicModInt(x, period) {
+            return ((x % period) + period) % period;
+        }
+
+        function harmonicGcd(a, b) {
+            let x = Math.abs(a);
+            let y = Math.abs(b);
+
+            while (y !== 0) {
+                const temp = y;
+                y = x % y;
+                x = temp;
+            }
+
+            return Math.max(1, x);
+        }
+
+        function harmonicStep(P) {
+            return P / PHI_2;
+        }
+
+        function modulationResidue(P) {
+            return harmonicMod(harmonicStep(P), 1);
+        }
+
+        function harmonicUnitDistance(x) {
+            const wrapped = harmonicMod(x, 1);
+            return Math.min(wrapped, 1 - wrapped);
+        }
+
+        function harmonicFormatPetalLabel(count, prefix = '') {
+            const noun = count === 1 ? 'petal' : 'petals';
+            return prefix ? `${prefix} ${count} ${noun}` : `${count} ${noun}`;
+        }
+
+        function harmonicFormatRational(numerator, denominator) {
+            const divisor = harmonicGcd(numerator, denominator);
+            const reducedNumerator = numerator / divisor;
+            const reducedDenominator = denominator / divisor;
+            return reducedDenominator === 1
+                ? `${reducedNumerator}`
+                : `${reducedNumerator}/${reducedDenominator}`;
+        }
+
+        function harmonicFormatPhi2Fraction(branch, divisor = 1) {
+            const numerator = branch === 1 ? 'phi^2' : `${branch}phi^2`;
+            return divisor === 1 ? numerator : `${numerator}/${divisor}`;
+        }
+
+        function harmonicAngularFormula(m, K, sign, branch) {
+            if (K === 0) {
+                return branch === 0
+                    ? 'P ~= 0 (mod phi^2)'
+                    : `P ~= ${harmonicFormatPhi2Fraction(branch, m)} (mod phi^2)`;
+            }
+
+            if (branch === 0) {
+                return `P ~= ${sign < 0 ? '-' : ''}${harmonicFormatRational(K, m)} (mod phi^2)`;
+            }
+
+            const phiTerm = branch === 1 ? 'phi^2' : `${branch}phi^2`;
+            return `P ~= (${phiTerm} ${sign < 0 ? '-' : '+'} ${K})/${m} (mod phi^2)`;
+        }
+
+        function harmonicEchoLabel(m) {
+            if (m === 2) return '1st echo';
+            if (m === 3) return '2nd echo';
+            if (m === 4) return '3rd echo';
+            return `${m}th echo`;
+        }
+
+        function harmonicWeight(amplitude) {
+            return Math.pow(Math.abs(amplitude) / HARMONIC_PRIMARY_WEIGHT, 0.35);
+        }
+
+        function harmonicPetalVisibility(K) {
+            if (K === 0) return 0.72;
+
+            const base = 1 / (1 + 0.025 * K + 0.0025 * K * K);
+            const fibonacciBonus = [1, 2, 3, 5, 8, 13, 21, 34].includes(K) ? 1.08 : 1;
+            return base * fibonacciBonus;
+        }
+
+        function harmonicDirectPenalty(K) {
+            if (K <= 12) return 1;
+            return 1 / (1 + 0.05 * (K - 12));
+        }
+
+        function harmonicDirichlet(delta, effectiveLength) {
+            const wrappedDelta = harmonicUnitDistance(delta);
+
+            if (wrappedDelta < 1e-12) {
+                return 1;
+            }
+
+            const denominator = Math.sin(PI * wrappedDelta);
+            if (Math.abs(denominator) < 1e-12) {
+                return 1;
+            }
+
+            return Math.abs(
+                Math.sin(PI * effectiveLength * wrappedDelta) /
+                (effectiveLength * denominator)
             );
         }
-        
-        // coherenceStrength(P): map distance-to-family into [0, 1] for the
-        // automatic tour. Exact and pseudo families now live on the same
-        // continuous graph, so the slowdown depends on whichever structure is
-        // most coherent at the current P.
+
+        function harmonicAngularCandidates(P) {
+            const step = harmonicStep(P);
+            const candidates = [];
+
+            for (const channel of HARMONIC_RESONANCE_CHANNELS) {
+                const scaledStep = channel.m * step;
+                const channelWeight = harmonicWeight(channel.amplitude);
+
+                for (let K = 0; K <= HARMONIC_PETAL_LIMIT; K++) {
+                    const signs = K === 0 ? [1] : [-1, 1];
+                    let bestChoice = null;
+
+                    for (const sign of signs) {
+                        const target = sign * K / PHI_2;
+                        const integerShift = Math.round(scaledStep - target);
+                        const delta = harmonicUnitDistance(scaledStep - target);
+                        const branch = harmonicModInt(integerShift, channel.m);
+                        const rawScore = channelWeight * harmonicDirichlet(delta, HARMONIC_EFFECTIVE_LENGTH);
+                        let score = rawScore * harmonicPetalVisibility(K) * harmonicDirectPenalty(K);
+
+                        if (K === 0 && channel.m > 1) {
+                            score *= 0.86;
+                        }
+
+                        const candidate = {
+                            kind: 'angular',
+                            type: K === 0
+                                ? (channel.m === 1 ? 'all-to-center' : 'pseudo')
+                                : (channel.m === 1 ? 'petals' : 'pseudo'),
+                            label: K === 0
+                                ? (channel.m === 1 ? 'All-to-center' : `${harmonicEchoLabel(channel.m)} core echo`)
+                                : (channel.m === 1
+                                    ? harmonicFormatPetalLabel(K)
+                                    : harmonicFormatPetalLabel(K, harmonicEchoLabel(channel.m))),
+                            formula: harmonicAngularFormula(channel.m, K, sign, branch),
+                            score,
+                            rawScore,
+                            delta,
+                            distanceP: delta * PHI_2 / channel.m,
+                            m: channel.m,
+                            K,
+                            sign,
+                            branch,
+                        };
+
+                        if (!bestChoice || candidate.score > bestChoice.score) {
+                            bestChoice = candidate;
+                        }
+                    }
+
+                    if (bestChoice) {
+                        candidates.push(bestChoice);
+                    }
+                }
+            }
+
+            return candidates.sort((a, b) => b.score - a.score);
+        }
+
+        function harmonicRationalCandidates(P) {
+            const step = harmonicStep(P);
+
+            return HARMONIC_RATIONAL_CHANNELS
+                .map((channel) => {
+                    const delta = harmonicUnitDistance(channel.q * step);
+                    const rawScore = harmonicDirichlet(delta, channel.effectiveLength);
+                    return {
+                        kind: 'rational',
+                        type: channel.type,
+                        label: channel.label,
+                        formula: channel.formula,
+                        score: channel.weight * rawScore,
+                        rawScore,
+                        delta,
+                        q: channel.q,
+                    };
+                })
+                .sort((a, b) => b.score - a.score);
+        }
+
+        function harmonicBestRational(candidates) {
+            const q5 = candidates.find((candidate) => candidate.q === 5) || null;
+            const q10 = candidates.find((candidate) => candidate.q === 10) || null;
+
+            if (q5 && q5.score >= 0.25) {
+                return q5;
+            }
+
+            if (q10 && (!q5 || q10.score >= q5.score * 0.95)) {
+                return q10;
+            }
+
+            return q5 || q10;
+        }
+
+        function harmonicMixedCandidates(angularCandidates) {
+            const carriers = angularCandidates
+                .filter((candidate) => candidate.rawScore > 0.04)
+                .slice(0, 25);
+            const bestByKey = new Map();
+
+            for (let i = 0; i < carriers.length; i++) {
+                for (let j = i + 1; j < carriers.length; j++) {
+                    const first = carriers[i];
+                    const second = carriers[j];
+
+                    if (first.K === 0 && second.K === 0) {
+                        continue;
+                    }
+
+                    if (first.K === 0 || second.K === 0) {
+                        const nonzero = first.K === 0 ? second : first;
+                        if (nonzero.K > HARMONIC_HYBRID_LIMIT) {
+                            continue;
+                        }
+
+                        const score = Math.sqrt(first.rawScore * second.rawScore) * 0.78 * harmonicPetalVisibility(nonzero.K);
+                        const key = `hybrid:${nonzero.K}`;
+                        const candidate = {
+                            kind: 'hybrid',
+                            type: 'spiral',
+                            label: `Core + ${nonzero.K} petals`,
+                            formula: `Core echo + ${nonzero.K}-petal carrier`,
+                            score,
+                            K: nonzero.K,
+                            sources: [first, second],
+                        };
+
+                        if (!bestByKey.has(key) || candidate.score > bestByKey.get(key).score) {
+                            bestByKey.set(key, candidate);
+                        }
+
+                        continue;
+                    }
+
+                    const envelope = Math.abs(first.K - second.K);
+                    if (envelope < 1 || envelope > HARMONIC_MIXED_LIMIT) {
+                        continue;
+                    }
+
+                    const envelopeWeight = 1 / (1 + 0.18 * (envelope - 1));
+                    const score = Math.sqrt(first.rawScore * second.rawScore) * 0.82 * envelopeWeight;
+                    const lo = Math.min(first.K, second.K);
+                    const hi = Math.max(first.K, second.K);
+                    const key = `envelope:${envelope}`;
+                    const candidate = {
+                        kind: 'envelope',
+                        type: 'pseudo',
+                        label: harmonicFormatPetalLabel(envelope, 'Diffuse pseudo'),
+                        formula: `Beat envelope |${hi} - ${lo}| = ${envelope}`,
+                        score,
+                        K: envelope,
+                        sources: [first, second],
+                    };
+
+                    if (!bestByKey.has(key) || candidate.score > bestByKey.get(key).score) {
+                        bestByKey.set(key, candidate);
+                    }
+                }
+            }
+
+            return Array.from(bestByKey.values()).sort((a, b) => b.score - a.score);
+        }
+
+        function analyzeCoherence(P) {
+            const angularCandidates = harmonicAngularCandidates(P);
+            const rationalCandidates = harmonicRationalCandidates(P);
+            const mixedCandidates = harmonicMixedCandidates(angularCandidates);
+            const groundCandidate = angularCandidates.find((candidate) => candidate.m === 1 && candidate.K === 0) || null;
+            const coreEchoCandidate = angularCandidates.find((candidate) => candidate.K === 0 && candidate.m > 1) || null;
+            const bestAngular = angularCandidates.find((candidate) => !(candidate.m === 1 && candidate.K === 0)) || null;
+            const bestRational = harmonicBestRational(rationalCandidates);
+            const bestMixed = mixedCandidates[0] || null;
+            const currentBest = Math.max(
+                bestAngular ? bestAngular.score : 0,
+                bestRational ? bestRational.score : 0,
+                bestMixed ? bestMixed.score : 0
+            );
+            let winner = null;
+
+            if (
+                groundCandidate &&
+                groundCandidate.score > HARMONIC_GROUND_MIN &&
+                groundCandidate.score >= currentBest * HARMONIC_GROUND_RATIO
+            ) {
+                winner = groundCandidate;
+            } else if (
+                bestMixed &&
+                bestMixed.kind === 'hybrid' &&
+                coreEchoCandidate &&
+                coreEchoCandidate.score > HARMONIC_CORE_MIN &&
+                bestMixed.score >= coreEchoCandidate.score * HARMONIC_HYBRID_RATIO
+            ) {
+                winner = bestMixed;
+            } else if (
+                bestMixed &&
+                bestMixed.kind === 'envelope' &&
+                bestAngular &&
+                bestMixed.score > HARMONIC_DISPLAY_CUTOFF &&
+                bestMixed.score >= bestAngular.score * HARMONIC_ENVELOPE_RATIO
+            ) {
+                winner = bestMixed;
+            } else if (
+                bestRational &&
+                bestAngular &&
+                bestRational.score > HARMONIC_RATIONAL_MIN &&
+                bestRational.score >= bestAngular.score * HARMONIC_RATIONAL_RATIO
+            ) {
+                winner = bestRational;
+            } else if (bestAngular && bestAngular.score > HARMONIC_DISPLAY_CUTOFF) {
+                winner = bestAngular;
+            } else if (bestRational && bestRational.score > HARMONIC_RATIONAL_MIN) {
+                winner = bestRational;
+            } else if (bestMixed && bestMixed.score > HARMONIC_DISPLAY_CUTOFF) {
+                winner = bestMixed;
+            }
+
+            if (!winner) {
+                winner = {
+                    type: 'unclear',
+                    label: 'Unclear',
+                    formula: '',
+                    score: 0,
+                };
+            }
+
+            return {
+                ...winner,
+                score: Math.max(0, Math.min(1, winner.score || 0)),
+                angularCandidates,
+                rationalCandidates,
+                mixedCandidates,
+            };
+        }
+
+        function detectCoherence(x) {
+            const result = analyzeCoherence(x);
+            return {
+                type: result.type,
+                label: result.label,
+                formula: result.formula,
+            };
+        }
+
+        function runTheoryVerification() {
+            return THEORY_BENCHMARKS.map(({ name, P }) => {
+                const result = analyzeCoherence(P);
+                return {
+                    name,
+                    P,
+                    type: result.type,
+                    label: result.label,
+                    formula: result.formula,
+                    score: Number(result.score.toFixed(6)),
+                };
+            });
+        }
+
+        window.harmonicResonanceDebug = {
+            analyzeCoherence,
+            coherenceStrength,
+            weightedCoherenceStrength,
+            smoothedWeightedCoherenceStrength,
+            coherenceTypeMultipliers,
+            harmonicAngularCandidates,
+            harmonicRationalCandidates,
+            harmonicMixedCandidates,
+            modulationResidue,
+            runTheoryVerification,
+        };
+
+        function clamp01(value) {
+            return Math.max(0, Math.min(1, value));
+        }
+
+        function getUiColor(name) {
+            const colorSchemes = isBlackWhiteScheme
+                ? {
+                    graphBackground: '#ffffff',
+                    graphGrid: 'rgba(0, 0, 0, 0.12)',
+                    graphBorder: 'rgba(0, 0, 0, 0.54)',
+                    graphText: 'rgba(0, 0, 0, 0.78)',
+                    playhead: 'rgba(0, 0, 0, 0.55)',
+                    angularGraph: 'rgba(0, 0, 0, 0.92)',
+                    rationalGraph: 'rgba(82, 82, 82, 0.92)',
+                    coherenceLine: 'rgba(0, 0, 0, 0.82)',
+                    tourWeightLine: 'rgba(82, 82, 82, 0.98)',
+                    particleGlow: 'rgba(0, 0, 0, ',
+                }
+                : {
+                    graphBackground: '#0b0d16',
+                    graphGrid: 'rgba(255, 255, 255, 0.08)',
+                    graphBorder: 'rgba(232, 228, 220, 0.34)',
+                    graphText: 'rgba(232, 228, 220, 0.68)',
+                    playhead: 'rgba(232, 228, 220, 0.5)',
+                    angularGraph: 'rgba(74, 222, 128, 0.9)',
+                    rationalGraph: 'rgba(251, 146, 60, 0.9)',
+                    coherenceLine: 'rgba(34, 211, 238, 0.72)',
+                    tourWeightLine: 'rgba(244, 208, 63, 0.96)',
+                    particleGlow: 'rgba(244, 208, 63, ',
+                };
+
+            return colorSchemes[name];
+        }
+
+        function getCategoryGraphColor(graph) {
+            if (graph.key === 'angular') return getUiColor('angularGraph');
+            if (graph.key === 'rational') return getUiColor('rationalGraph');
+            return graph.color;
+        }
+
+        const coherenceAnalysisCache = new Map();
+
+        function coherenceCacheKey(P) {
+            return P.toFixed(8);
+        }
+
+        function clearCoherenceAnalysisCacheIfNeeded() {
+            if (coherenceAnalysisCache.size > COHERENCE_ANALYSIS_CACHE_LIMIT) {
+                coherenceAnalysisCache.clear();
+            }
+        }
+
+        function getCoherenceAnalysis(P) {
+            const key = coherenceCacheKey(P);
+            const cached = coherenceAnalysisCache.get(key);
+
+            if (cached) {
+                return cached;
+            }
+
+            clearCoherenceAnalysisCacheIfNeeded();
+
+            const angularCandidates = harmonicAngularCandidates(P);
+            const rationalCandidates = harmonicRationalCandidates(P);
+            const analysis = {
+                angularCandidates,
+                rationalCandidates,
+                bestRational: harmonicBestRational(rationalCandidates),
+                mixedCandidates: null,
+            };
+
+            coherenceAnalysisCache.set(key, analysis);
+            return analysis;
+        }
+
         function coherenceStrength(P) {
-            const piQuarter = PI / 4;
-            const halfPhi2 = PHI_2 / 2;
-            const exactPetal  = findNearestPetalLattice(P);
-            const nearestStepInteger = Math.round(P / PHI_2);
-            const nearestPiN   = Math.round(P / piQuarter);
-            const nearestNHalfPhi2 = Math.round((P - 0.5) / halfPhi2);
-            const nearestHalfInt = Math.round(P / PHI_2 - 0.5) + 0.5;
-            const phi2Dist    = Math.abs(P - nearestStepInteger * PHI_2);
-            const piDist      = Math.abs(P - nearestPiN * piQuarter);
-            const halfDiscDist = Math.abs((P - 0.5) - Math.round((P - 0.5) / halfPhi2) * halfPhi2);
-            const r8Dist      = Math.abs(P - nearestHalfInt * PHI_2);
-            const dyadic      = findNearestPetalLattice(P, {
-                scale: 2,
-                maxPetals: PSEUDO_PETAL_MAX,
-            });
-            const dyadicDist  = dyadic.distanceP;
-            const quarter     = findNearestPetalLattice(P, {
-                scale: 4,
-                maxPetals: QUARTER_PSEUDO_MAX,
-            });
-            const quarterDist = quarter.distanceP;
-            const empirical = findNearestEmpiricalPseudo(P);
-            const empiricalDist = empirical ? empirical.distanceP : Infinity;
-
-            const exactNormalizedDist = Math.min(
-                exactPetal.distanceP / TIGHT_TOLERANCE + exactPetalBias(exactPetal.count),
-                Math.abs(nearestStepInteger) >= 1
-                    ? phi2Dist / ALL_TO_CENTER_TOLERANCE
-                    : Infinity,
-                Math.abs(nearestPiN) >= 4
-                    ? piDist / TOLERANCE
-                    : Infinity,
-                Math.abs(nearestHalfInt) >= 1.5
-                    ? r8Dist / TIGHT_TOLERANCE
-                    : Infinity,
-            );
-
-            const exactStrength = Math.exp(-exactNormalizedDist);
-            const halfDiscStrength = Math.abs(nearestNHalfPhi2) >= 2
-                ? pseudoStrengthFromNormalized(halfDiscDist / TIGHT_TOLERANCE)
-                : 0;
-            const dyadicStrength = pseudoStrengthFromNormalized(
-                dyadicDist / PSEUDO_SHOULDER_TOLERANCE + pseudoPetalBias(dyadic.count)
-            );
-            const quarterStrength = pseudoStrengthFromNormalized(
-                quarterDist / PSEUDO_DIFFUSE_TOLERANCE + QUARTER_PSEUDO_BIAS
-            );
-            const empiricalStrength = empirical
-                ? pseudoStrengthFromNormalized(
-                    empiricalDist / empirical.shoulderTolerance,
-                    empirical.strengthPeak || PSEUDO_STRENGTH_PEAK
-                )
-                : 0;
-            const pseudoStrength = Math.max(
-                halfDiscStrength,
-                dyadicStrength,
-                quarterStrength,
-                empiricalStrength
-            );
-
-            return Math.max(exactStrength, pseudoStrength);
+            return getRawCoherenceFromCategoryScores(getCandidateCategoryScores(P));
         }
-        
+
+        function getDirectCategoryScores(P) {
+            const analysis = getCoherenceAnalysis(P);
+            return {
+                angular: clamp01(analysis.angularCandidates[0] ? analysis.angularCandidates[0].score : 0),
+                angularTour: getAngularTourScoreFromCandidates(analysis.angularCandidates),
+                rational: clamp01(analysis.bestRational ? analysis.bestRational.score : 0),
+            };
+        }
+
+        function getCandidateCategoryScores(P) {
+            const analysis = getCoherenceAnalysis(P);
+            const directScores = getDirectCategoryScores(P);
+
+            if (!analysis.mixedCandidates) {
+                analysis.mixedCandidates = harmonicMixedCandidates(analysis.angularCandidates);
+            }
+
+            return {
+                ...directScores,
+                mixed: clamp01(analysis.mixedCandidates[0] ? analysis.mixedCandidates[0].score : 0),
+            };
+        }
+
+        function getAngularTourScoreFromCandidates(angularCandidates) {
+            let bestScore = 0;
+
+            for (const candidate of angularCandidates) {
+                const boost = candidate.K === 0 && candidate.m === 3
+                    ? HARMONIC_SECOND_CORE_ECHO_TOUR_BOOST
+                    : 1;
+                bestScore = Math.max(bestScore, candidate.score * boost);
+            }
+
+            return clamp01(bestScore);
+        }
+
+        function getRawCoherenceFromCategoryScores(scores) {
+            return clamp01(Math.max(scores.angular, scores.rational, scores.mixed));
+        }
+
+        function getWeightedCoherenceFromCategoryScores(scores) {
+            const angularTourScore = scores.angularTour ?? scores.angular;
+            return clamp01(Math.max(
+                angularTourScore * coherenceTypeMultipliers.angular,
+                scores.rational * coherenceTypeMultipliers.rational
+            ));
+        }
+
+        function weightedCoherenceStrength(P) {
+            return getWeightedCoherenceFromCategoryScores(getDirectCategoryScores(P));
+        }
+
+        function getTourSmoothingAmount() {
+            return clamp01(tourRemap.smoothing / 250);
+        }
+
+        function getTourSmoothingRadius() {
+            return TOUR_SMOOTHING_MAX_RADIUS * getTourSmoothingAmount();
+        }
+
+        function getDirectionalWeightedPeak(P, direction, radius) {
+            let peak = 0;
+
+            for (let i = 1; i <= TOUR_SMOOTHING_SAMPLES_PER_SIDE; i++) {
+                const sampleP = P + direction * radius * (i / TOUR_SMOOTHING_SAMPLES_PER_SIDE);
+                peak = Math.max(peak, weightedCoherenceStrength(sampleP));
+            }
+
+            return peak;
+        }
+
+        function smoothedWeightedCoherenceStrength(P) {
+            const smoothing = getTourSmoothingAmount();
+            const center = weightedCoherenceStrength(P);
+
+            if (smoothing <= 0) {
+                return center;
+            }
+
+            const radius = getTourSmoothingRadius();
+            const leftPeak = getDirectionalWeightedPeak(P, -1, radius);
+            const rightPeak = getDirectionalWeightedPeak(P, 1, radius);
+            const bridgeTarget = Math.min(leftPeak, rightPeak);
+
+            if (bridgeTarget <= center) {
+                return center;
+            }
+
+            const valleyDepth = bridgeTarget - center;
+            const valleyGate = clamp01(valleyDepth / 0.08);
+            return clamp01(center + valleyDepth * smoothing * valleyGate);
+        }
+
+        function getSmoothedWeightedSeries(samplePs) {
+            const weightedScores = samplePs.map((P) => weightedCoherenceStrength(P));
+            const smoothing = getTourSmoothingAmount();
+
+            if (smoothing <= 0) {
+                return weightedScores;
+            }
+
+            const radius = getTourSmoothingRadius();
+            return weightedScores.map((center, index) => {
+                let leftPeak = 0;
+                let rightPeak = 0;
+
+                for (let i = index - 1; i >= 0 && samplePs[index] - samplePs[i] <= radius; i--) {
+                    leftPeak = Math.max(leftPeak, weightedScores[i]);
+                }
+
+                for (let i = index + 1; i < samplePs.length && samplePs[i] - samplePs[index] <= radius; i++) {
+                    rightPeak = Math.max(rightPeak, weightedScores[i]);
+                }
+
+                const bridgeTarget = Math.min(leftPeak, rightPeak);
+                if (bridgeTarget <= center) {
+                    return center;
+                }
+
+                const valleyDepth = bridgeTarget - center;
+                const valleyGate = clamp01(valleyDepth / 0.08);
+                return clamp01(center + valleyDepth * smoothing * valleyGate);
+            });
+        }
+
+        function getTourWeightFromCoherence(coherenceScore) {
+            const inputValue = clamp01(coherenceScore * tourRemap.input);
+            const span = Math.max(0.01, tourRemap.white - tourRemap.black);
+            const normalized = clamp01((inputValue - tourRemap.black) / span);
+            const curved = Math.pow(normalized, 1 / Math.max(0.05, tourRemap.gamma));
+            const lifted = tourRemap.lift >= 0
+                ? curved + tourRemap.lift * (1 - curved)
+                : curved * (1 + tourRemap.lift);
+            return clamp01((lifted * tourRemap.multiply + tourRemap.offset) * tourRemap.output);
+        }
+
+        function getTourWeight(P) {
+            return getTourWeightFromCoherence(smoothedWeightedCoherenceStrength(P));
+        }
+
         function getTourSpeed(x) {
-            const strength = coherenceStrength(x);
+            const strength = getTourWeight(x);
             // Log interpolation for the large speed range
             const logPeak = Math.log(TOUR_PEAK_SPEED);
             const logCruise = Math.log(TOUR_CRUISE_SPEED);
@@ -960,6 +1461,387 @@
             
             lastTourSpeed = targetSpeed;
             return targetSpeed;
+        }
+
+        function getTourGraphWindowStart() {
+            return numPetals - tourRemap.range * TOUR_GRAPH_PLAYHEAD_T;
+        }
+
+        function getTourGraphRect() {
+            const width = tourGraphCanvas.clientWidth || 420;
+            const height = tourGraphCanvas.clientHeight || 230;
+            return {
+                x: 44,
+                y: 18,
+                width: width - 62,
+                height: height - 52,
+            };
+        }
+
+        function resizeGraphCanvas(canvas, ctx, fallbackWidth = 420, fallbackHeight = 160) {
+            const graphDpr = window.devicePixelRatio || 1;
+            const width = canvas.clientWidth || fallbackWidth;
+            const height = canvas.clientHeight || fallbackHeight;
+            canvas.width = width * graphDpr;
+            canvas.height = height * graphDpr;
+            ctx.setTransform(1, 0, 0, 1, 0, 0);
+            ctx.scale(graphDpr, graphDpr);
+        }
+
+        function resizeTourGraph() {
+            resizeGraphCanvas(tourGraphCanvas, tourGraphCtx, 420, 230);
+            categoryGraphs.forEach((graph) => resizeGraphCanvas(graph.canvas, graph.ctx, 150, 120));
+            drawTourGraph();
+        }
+
+        function tourGraphXForP(P, windowStart, rect) {
+            return rect.x + ((P - windowStart) / tourRemap.range) * rect.width;
+        }
+
+        function tourGraphYForValue(value, rect) {
+            return rect.y + (1 - clamp01(value)) * rect.height;
+        }
+
+        function drawTourGraphLine(points, color, width) {
+            tourGraphCtx.beginPath();
+            points.forEach((point, index) => {
+                if (index === 0) {
+                    tourGraphCtx.moveTo(point.x, point.y);
+                } else {
+                    tourGraphCtx.lineTo(point.x, point.y);
+                }
+            });
+            tourGraphCtx.strokeStyle = color;
+            tourGraphCtx.lineWidth = width;
+            tourGraphCtx.lineJoin = 'round';
+            tourGraphCtx.lineCap = 'round';
+            tourGraphCtx.stroke();
+        }
+
+        function drawCanvasLine(ctx, points, color, width) {
+            ctx.beginPath();
+            points.forEach((point, index) => {
+                if (index === 0) {
+                    ctx.moveTo(point.x, point.y);
+                } else {
+                    ctx.lineTo(point.x, point.y);
+                }
+            });
+            ctx.strokeStyle = color;
+            ctx.lineWidth = width;
+            ctx.lineJoin = 'round';
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        }
+
+        function getCategoryGraphRect(canvas) {
+            const width = canvas.clientWidth || 150;
+            const height = canvas.clientHeight || 120;
+            return {
+                x: 30,
+                y: 16,
+                width: width - 40,
+                height: height - 34,
+            };
+        }
+
+        function drawResonanceCategoryGraphs(windowStart) {
+            const samples = getGraphSamplePs(windowStart)
+                .map((P) => ({ P, scores: getDirectCategoryScores(P) }));
+
+            for (const graph of categoryGraphs) {
+                const canvas = graph.canvas;
+                const ctx = graph.ctx;
+                const width = canvas.clientWidth || 150;
+                const height = canvas.clientHeight || 120;
+                const rect = getCategoryGraphRect(canvas);
+
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = getUiColor('graphBackground');
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = getUiColor('graphGrid');
+                ctx.lineWidth = 1;
+                for (let i = 0; i <= 2; i++) {
+                    const y = rect.y + (i / 2) * rect.height;
+                    ctx.beginPath();
+                    ctx.moveTo(rect.x, y);
+                    ctx.lineTo(rect.x + rect.width, y);
+                    ctx.stroke();
+                }
+                for (let i = 0; i <= 2; i++) {
+                    const x = rect.x + (i / 2) * rect.width;
+                    ctx.beginPath();
+                    ctx.moveTo(x, rect.y);
+                    ctx.lineTo(x, rect.y + rect.height);
+                    ctx.stroke();
+                }
+
+                ctx.strokeStyle = getUiColor('graphBorder');
+                ctx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+
+                const points = samples.map((sample) => ({
+                    x: tourGraphXForP(sample.P, windowStart, rect),
+                    y: tourGraphYForValue(sample.scores[graph.key], rect),
+                }));
+                drawCanvasLine(ctx, points, getCategoryGraphColor(graph), 2);
+
+                const currentX = rect.x + TOUR_GRAPH_PLAYHEAD_T * rect.width;
+                ctx.strokeStyle = getUiColor('playhead');
+                ctx.setLineDash([3, 4]);
+                ctx.beginPath();
+                ctx.moveTo(currentX, rect.y);
+                ctx.lineTo(currentX, rect.y + rect.height);
+                ctx.stroke();
+                ctx.setLineDash([]);
+
+                const currentScore = getCandidateCategoryScores(numPetals)[graph.key];
+                ctx.font = '9px JetBrains Mono, monospace';
+                ctx.textAlign = 'left';
+                ctx.textBaseline = 'top';
+                ctx.fillStyle = getCategoryGraphColor(graph);
+                ctx.fillText(graph.label, rect.x + 5, rect.y + 5);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = getUiColor('graphText');
+                ctx.fillText(currentScore.toFixed(2), rect.x + rect.width - 5, rect.y + 5);
+            }
+        }
+
+        function drawTourGraph() {
+            const width = tourGraphCanvas.clientWidth || 420;
+            const height = tourGraphCanvas.clientHeight || 230;
+            const rect = getTourGraphRect();
+            const windowStart = getTourGraphWindowStart();
+            const windowEnd = windowStart + tourRemap.range;
+
+            tourGraphCtx.clearRect(0, 0, width, height);
+            tourGraphCtx.fillStyle = getUiColor('graphBackground');
+            tourGraphCtx.fillRect(0, 0, width, height);
+
+            tourGraphCtx.strokeStyle = getUiColor('graphGrid');
+            tourGraphCtx.lineWidth = 1;
+            for (let i = 0; i <= 4; i++) {
+                const x = rect.x + (i / 4) * rect.width;
+                tourGraphCtx.beginPath();
+                tourGraphCtx.moveTo(x, rect.y);
+                tourGraphCtx.lineTo(x, rect.y + rect.height);
+                tourGraphCtx.stroke();
+            }
+
+            for (let i = 0; i <= 4; i++) {
+                const y = rect.y + (i / 4) * rect.height;
+                tourGraphCtx.beginPath();
+                tourGraphCtx.moveTo(rect.x, y);
+                tourGraphCtx.lineTo(rect.x + rect.width, y);
+                tourGraphCtx.stroke();
+            }
+
+            tourGraphCtx.strokeStyle = getUiColor('graphBorder');
+            tourGraphCtx.strokeRect(rect.x, rect.y, rect.width, rect.height);
+
+            tourGraphCtx.fillStyle = getUiColor('graphText');
+            tourGraphCtx.font = '10px JetBrains Mono, monospace';
+            tourGraphCtx.textAlign = 'right';
+            tourGraphCtx.textBaseline = 'middle';
+            for (const value of [0, 0.5, 1]) {
+                tourGraphCtx.fillText(value.toFixed(1), rect.x - 8, tourGraphYForValue(value, rect));
+            }
+
+            tourGraphCtx.textAlign = 'center';
+            tourGraphCtx.textBaseline = 'top';
+            for (const p of [windowStart, numPetals, windowEnd]) {
+                tourGraphCtx.fillText(formatGraphPValue(p), tourGraphXForP(p, windowStart, rect), rect.y + rect.height + 8);
+            }
+
+            tourGraphCtx.textAlign = 'right';
+            tourGraphCtx.fillText('P', rect.x + rect.width, height - 12);
+
+            tourGraphCtx.save();
+            tourGraphCtx.translate(13, rect.y + rect.height / 2);
+            tourGraphCtx.rotate(-Math.PI / 2);
+            tourGraphCtx.textAlign = 'center';
+            tourGraphCtx.fillText('coherence', 0, 0);
+            tourGraphCtx.restore();
+
+            const coherencePoints = [];
+            const weightPoints = [];
+            const graphSamplePs = getGraphSamplePs(windowStart);
+            const graphWeightedScores = getSmoothedWeightedSeries(graphSamplePs);
+            let currentCoherence = 0;
+            let currentTourWeight = 0;
+            for (let index = 0; index < graphSamplePs.length; index++) {
+                const P = graphSamplePs[index];
+                const x = tourGraphXForP(P, windowStart, rect);
+                const categoryScores = getCandidateCategoryScores(P);
+                const coherence = getRawCoherenceFromCategoryScores(categoryScores);
+                const tourWeight = getTourWeightFromCoherence(graphWeightedScores[index]);
+                if (Math.abs(P - numPetals) < 1e-10) {
+                    currentCoherence = coherence;
+                    currentTourWeight = tourWeight;
+                }
+                coherencePoints.push({
+                    x,
+                    y: tourGraphYForValue(coherence, rect),
+                });
+                weightPoints.push({
+                    x,
+                    y: tourGraphYForValue(tourWeight, rect),
+                });
+            }
+
+            drawTourGraphLine(coherencePoints, getUiColor('coherenceLine'), 1.5);
+            drawTourGraphLine(weightPoints, getUiColor('tourWeightLine'), 2.5);
+
+            const currentX = rect.x + TOUR_GRAPH_PLAYHEAD_T * rect.width;
+            tourGraphCtx.strokeStyle = getUiColor('playhead');
+            tourGraphCtx.setLineDash([4, 4]);
+            tourGraphCtx.beginPath();
+            tourGraphCtx.moveTo(currentX, rect.y);
+            tourGraphCtx.lineTo(currentX, rect.y + rect.height);
+            tourGraphCtx.stroke();
+            tourGraphCtx.setLineDash([]);
+
+            tourGraphCtx.textAlign = 'left';
+            tourGraphCtx.textBaseline = 'top';
+            tourGraphCtx.fillStyle = getUiColor('coherenceLine');
+            tourGraphCtx.fillText(`coherence ${currentCoherence.toFixed(3)}`, rect.x + 8, rect.y + 8);
+            tourGraphCtx.fillStyle = getUiColor('tourWeightLine');
+            tourGraphCtx.fillText(`tour weight ${currentTourWeight.toFixed(3)}`, rect.x + 8, rect.y + 23);
+
+            drawResonanceCategoryGraphs(windowStart);
+        }
+
+        function formatTourControlValue(value) {
+            const numericValue = Number(value);
+            if (Math.abs(numericValue) > 0 && Math.abs(numericValue) < 0.01) {
+                return numericValue.toFixed(4);
+            }
+            if (Math.abs(numericValue) < 0.1) {
+                return numericValue.toFixed(3);
+            }
+            return numericValue.toFixed(2);
+        }
+
+        function getPrecisionForRange(range) {
+            if (range <= 0.35) return 5;
+            if (range <= 1) return 4;
+            if (range <= 3) return 3;
+            return 2;
+        }
+
+        function formatGraphPValue(P) {
+            return P.toFixed(getPrecisionForRange(tourRemap.range));
+        }
+
+        function getValueDisplayDecimals() {
+            if (isTourMode) {
+                return getPrecisionForRange(tourRemap.range);
+            }
+
+            if (step === 0.01) return 2;
+            if (step === 0.001) return 3;
+            if (step === 0.0001) return 4;
+            if (step === 0.00001) return 5;
+            if (step === 0.000001) return 6;
+            return 1;
+        }
+
+        function getGraphSamplePs(windowStart) {
+            const points = [];
+
+            for (let i = 0; i < TOUR_GRAPH_DRAW_SAMPLES; i++) {
+                const t = i / (TOUR_GRAPH_DRAW_SAMPLES - 1);
+                points.push(windowStart + t * tourRemap.range);
+            }
+
+            points.push(numPetals);
+            return points
+                .sort((a, b) => a - b)
+                .filter((P, index, sorted) => index === 0 || Math.abs(P - sorted[index - 1]) > 1e-10);
+        }
+
+        function syncTourRemapControls() {
+            if (tourRemap.white <= tourRemap.black + 0.01) {
+                tourRemap.white = Math.min(1, tourRemap.black + 0.01);
+                if (tourRemap.white <= tourRemap.black) {
+                    tourRemap.black = Math.max(0, tourRemap.white - 0.01);
+                }
+            }
+
+            tourRangeInput.value = tourRemap.range;
+            tourBlackInput.value = tourRemap.black;
+            tourWhiteInput.value = tourRemap.white;
+            tourGammaInput.value = tourRemap.gamma;
+            tourSmoothingInput.value = tourRemap.smoothing;
+            tourInputGainInput.value = tourRemap.input;
+            tourOutputGainInput.value = tourRemap.output;
+            tourLiftInput.value = tourRemap.lift;
+            tourMultiplyInput.value = tourRemap.multiply;
+            tourOffsetInput.value = tourRemap.offset;
+
+            tourRangeOutput.textContent = formatTourControlValue(tourRemap.range);
+            tourBlackOutput.textContent = formatTourControlValue(tourRemap.black);
+            tourWhiteOutput.textContent = formatTourControlValue(tourRemap.white);
+            tourGammaOutput.textContent = formatTourControlValue(tourRemap.gamma);
+            tourSmoothingOutput.textContent = Math.round(tourRemap.smoothing);
+            tourInputGainOutput.textContent = formatTourControlValue(tourRemap.input);
+            tourOutputGainOutput.textContent = formatTourControlValue(tourRemap.output);
+            tourLiftOutput.textContent = formatTourControlValue(tourRemap.lift);
+            tourMultiplyOutput.textContent = formatTourControlValue(tourRemap.multiply);
+            tourOffsetOutput.textContent = formatTourControlValue(tourRemap.offset);
+
+            valueDisplay.textContent = numPetals.toFixed(getValueDisplayDecimals());
+            drawTourGraph();
+        }
+
+        function syncCoherenceMultiplierControls() {
+            coherenceAngularMultiplierInput.value = coherenceTypeMultipliers.angular;
+            coherenceRationalMultiplierInput.value = coherenceTypeMultipliers.rational;
+
+            coherenceAngularMultiplierOutput.textContent = formatTourControlValue(coherenceTypeMultipliers.angular);
+            coherenceRationalMultiplierOutput.textContent = formatTourControlValue(coherenceTypeMultipliers.rational);
+
+            draw(numPetals);
+        }
+
+        function updateCoherenceMultiplierFromControl(input) {
+            const value = Number(input.value);
+
+            if (input === coherenceAngularMultiplierInput) {
+                coherenceTypeMultipliers.angular = value;
+            } else if (input === coherenceRationalMultiplierInput) {
+                coherenceTypeMultipliers.rational = value;
+            }
+
+            syncCoherenceMultiplierControls();
+        }
+
+        function updateTourRemapFromControl(input) {
+            const value = Number(input.value);
+
+            if (input === tourRangeInput) {
+                tourRemap.range = value;
+            } else if (input === tourBlackInput) {
+                tourRemap.black = Math.min(value, tourRemap.white - 0.01);
+            } else if (input === tourWhiteInput) {
+                tourRemap.white = Math.max(value, tourRemap.black + 0.01);
+            } else if (input === tourGammaInput) {
+                tourRemap.gamma = value;
+            } else if (input === tourSmoothingInput) {
+                tourRemap.smoothing = value;
+            } else if (input === tourInputGainInput) {
+                tourRemap.input = value;
+            } else if (input === tourOutputGainInput) {
+                tourRemap.output = value;
+            } else if (input === tourLiftInput) {
+                tourRemap.lift = value;
+            } else if (input === tourMultiplyInput) {
+                tourRemap.multiply = value;
+            } else if (input === tourOffsetInput) {
+                tourRemap.offset = value;
+            }
+
+            syncTourRemapControls();
         }
         
         let currentParticles = [];
@@ -982,6 +1864,16 @@
         const GOLDEN_ANGLE = Math.PI * (3 - Math.sqrt(5));
         
         function getColor(petalShape, birthIndex) {
+            if (isBlackWhiteScheme) {
+                const t = colorByBirthOrder
+                    ? birthIndex / (TOTAL_PARTICLES - 1)
+                    : (petalShape - 0.2) / 0.8;
+                const value = colorByBirthOrder
+                    ? Math.round(30 + clamp01(t) * 150)
+                    : Math.round(225 - clamp01(t) * 205);
+                return `rgb(${value}, ${value}, ${value})`;
+            }
+
             if (colorByBirthOrder) {
                 // Blue to red gradient based on birth order (0-999)
                 const t = birthIndex / TOTAL_PARTICLES;
@@ -998,12 +1890,28 @@
                 return `rgb(${r}, ${g}, ${b})`;
             }
         }
+
+        function drawVisualizationBackground(center) {
+            if (isBlackWhiteScheme) {
+                ctx.fillStyle = '#ffffff';
+                ctx.fillRect(0, 0, size, size);
+                return;
+            }
+
+            const gradient = ctx.createRadialGradient(center, center, 0, center, center, size * 0.52);
+            gradient.addColorStop(0, '#12121f');
+            gradient.addColorStop(0.7, '#0a0a12');
+            gradient.addColorStop(1, '#0a0a12');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, size, size);
+        }
         
         function draw(numPetals) {
             const maxRadius = size * 0.45;
             const center = size / 2;
             
             ctx.clearRect(0, 0, size, size);
+            drawVisualizationBackground(center);
             
             const particles = [];
             
@@ -1039,12 +1947,12 @@
                     ctx.beginPath();
                     ctx.arc(x, y, particleSize * 2, 0, Math.PI * 2);
                     const alpha = (petalShape - 0.7) * 0.5;
-                    ctx.fillStyle = `rgba(244, 208, 63, ${alpha})`;
+                    ctx.fillStyle = `${getUiColor('particleGlow')}${alpha})`;
                     ctx.fill();
                 }
             }
             
-            const displayCoherence = detectCoherence(numPetals);
+            const displayCoherence = analyzeCoherence(numPetals);
             
             structureIndicator.className = 'structure-indicator ' + displayCoherence.type;
             structureIndicator.textContent = displayCoherence.label;
@@ -1056,33 +1964,33 @@
                 // No coherence - fade out
                 labelOpacity = 0;
             } else if (isTourMode) {
-                // In tour mode, fade based on coherence strength
+                // In tour mode, fade based on the editable tour weight
                 // This syncs with the slowdown - labels fade in as we slow down
-                const strength = coherenceStrength(numPetals);
+                const strength = getTourWeight(numPetals);
                 // strength 1 = opacity 1, strength ~0.37 = opacity ~0.5
                 labelOpacity = Math.max(0.1, strength);
             } else {
                 // Not in tour mode - instant on when coherent
                 labelOpacity = 1;
             }
+
+            if (isBlackWhiteScheme && displayCoherence.type !== 'unclear') {
+                labelOpacity = Math.max(0.75, labelOpacity);
+            }
             
             structureIndicator.style.opacity = labelOpacity;
             formulaDisplay.style.opacity = labelOpacity;
+
+            if (!tourResponsePanel.hidden) {
+                drawTourGraph();
+            }
             
             currentParticles = particles;
         }
         
         function updateValue(delta) {
             numPetals = numPetals + delta;
-            
-            let decimals = 1;
-            if (step === 0.01) decimals = 2;
-            else if (step === 0.001) decimals = 3;
-            else if (step === 0.0001) decimals = 4;
-            else if (step === 0.00001) decimals = 5;
-            else if (step === 0.000001) decimals = 6;
-            
-            valueDisplay.textContent = numPetals.toFixed(decimals);
+            valueDisplay.textContent = numPetals.toFixed(getValueDisplayDecimals());
             draw(numPetals);
         }
         
@@ -1094,8 +2002,7 @@
         }
         
         function startDrag(e) {
-            if (e.target.classList.contains('granularity-btn')) return;
-            if (e.target.closest('.play-btn')) return;
+            if (e.target.closest('button, input, label, .tour-response-panel')) return;
             
             if (isPlaying) {
                 togglePlay();
@@ -1146,14 +2053,7 @@
                 granularityBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 step = parseFloat(btn.dataset.step);
-                
-                let decimals = 1;
-                if (step === 0.01) decimals = 2;
-                else if (step === 0.001) decimals = 3;
-                else if (step === 0.0001) decimals = 4;
-                else if (step === 0.00001) decimals = 5;
-                else if (step === 0.000001) decimals = 6;
-                valueDisplay.textContent = numPetals.toFixed(decimals);
+                valueDisplay.textContent = numPetals.toFixed(getValueDisplayDecimals());
             });
             
             btn.addEventListener('touchstart', (e) => e.stopPropagation());
@@ -1179,14 +2079,7 @@
                 
                 numPetals += currentStep;
                 
-                let decimals = 1;
-                if (step === 0.01 || isTourMode) decimals = 2;
-                else if (step === 0.001) decimals = 3;
-                else if (step === 0.0001) decimals = 4;
-                else if (step === 0.00001) decimals = 5;
-                else if (step === 0.000001) decimals = 6;
-                
-                valueDisplay.textContent = numPetals.toFixed(decimals);
+                valueDisplay.textContent = numPetals.toFixed(getValueDisplayDecimals());
                 draw(numPetals);
             }
             
@@ -1239,8 +2132,79 @@
         });
         
         colorBtn.addEventListener('touchstart', (e) => e.stopPropagation());
+
+        function syncColorScheme() {
+            document.body.classList.toggle('bw-scheme', isBlackWhiteScheme);
+            schemeBtn.classList.toggle('active', isBlackWhiteScheme);
+
+            if (isBlackWhiteScheme) {
+                canvas.style.background = '#ffffff';
+                canvas.style.borderRadius = '0';
+                canvas.style.boxShadow = 'none';
+            } else {
+                canvas.style.background = 'radial-gradient(ellipse at center, var(--bg-surface) 0%, var(--bg-deep) 70%)';
+                canvas.style.borderRadius = '50%';
+                canvas.style.boxShadow = '0 0 40px var(--glow-blue), inset 0 0 60px rgba(0, 0, 0, 0.5)';
+            }
+
+            draw(numPetals);
+        }
+
+        schemeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            isBlackWhiteScheme = !isBlackWhiteScheme;
+            syncColorScheme();
+        });
+
+        schemeBtn.addEventListener('touchstart', (e) => e.stopPropagation());
+
+        tourSettingsBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const isHidden = tourResponsePanel.hidden;
+            tourResponsePanel.hidden = !isHidden;
+            tourSettingsBtn.classList.toggle('active', isHidden);
+            tourSettingsBtn.setAttribute('aria-expanded', String(isHidden));
+            if (isHidden) {
+                resizeTourGraph();
+            }
+        });
+
+        tourSettingsBtn.addEventListener('touchstart', (e) => e.stopPropagation());
+
+        [
+            coherenceAngularMultiplierInput,
+            coherenceRationalMultiplierInput,
+        ].forEach((input) => {
+            input.addEventListener('input', (e) => {
+                e.stopPropagation();
+                updateCoherenceMultiplierFromControl(input);
+            });
+        });
+
+        [
+            tourRangeInput,
+            tourBlackInput,
+            tourWhiteInput,
+            tourGammaInput,
+            tourSmoothingInput,
+            tourInputGainInput,
+            tourOutputGainInput,
+            tourLiftInput,
+            tourMultiplyInput,
+            tourOffsetInput,
+        ].forEach((input) => {
+            input.addEventListener('input', (e) => {
+                e.stopPropagation();
+                updateTourRemapFromControl(input);
+            });
+        });
         
         window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('resize', () => {
+            if (!tourResponsePanel.hidden) {
+                resizeTourGraph();
+            }
+        });
         
         // Particle hover detection
         const tooltip = document.getElementById('particleTooltip');
@@ -1283,11 +2247,13 @@
         });
         
         // Initial setup
+        syncTourRemapControls();
         playBtn.classList.add('playing');
         tourBtn.classList.add('active');
         lastFrameTime = performance.now();
         animationId = requestAnimationFrame(animate);
         resizeCanvas();
+        syncCoherenceMultiplierControls();
     </script>
 </body>
 </html>
